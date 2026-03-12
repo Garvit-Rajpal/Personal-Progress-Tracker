@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  streak       Int      @default(0)     
+  lastActive   DateTime @default(now())
+
+  sessions        Session[]
+  roadmapProgress UserProgress[]
+  dsaProgress     UserDSAProgress[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique 
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum PhaseType {
+  FS    
+  AI    
+  BOTH
+}
+
+model RoadmapPhase {
+  id          String   @id @default(uuid())
+  title       String
+  type        PhaseType
+  duration    String
+  order       Int
+  resources   Json     
+  createdAt   DateTime @default(now())
+  
+  items       RoadmapItem[]
+}
+
+enum BadgeType {
+  CORE
+  AI
+  PROJECT
+  JOB
+}
+
+model RoadmapItem {
+  id          String   @id @default(uuid())
+  phaseId     String
+  title       String
+  description String
+  badge       BadgeType
+  order       Int
+  
+  phase       RoadmapPhase   @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  progress    UserProgress[]
+}
+
+model UserProgress {
+  id          String    @id @default(uuid())
+  userId      String
+  itemId      String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item     RoadmapItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId]) 
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model DSAQuestion {
+  id          String   @id @default(uuid())
+  title       String
+  topic       String
+  difficulty  Difficulty
+  link        String
+
+  dailySets    DailyDSASet[] 
+  userProgress UserDSAProgress[]
+}
+
+model DailyDSASet {
+  id          String        @id @default(uuid())
+  date        DateTime      @unique @db.Date 
+  questions   DSAQuestion[]
+}
+
+model UserDSAProgress {
+  id          String    @id @default(uuid())
+  userId      String
+  questionId  String
+  solved      Boolean   @default(false)
+  notes       String?   @db.Text
+  solvedAt    DateTime?
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question DSAQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+}
