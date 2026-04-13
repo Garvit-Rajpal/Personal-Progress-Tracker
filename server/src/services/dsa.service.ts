@@ -1,16 +1,53 @@
 import { prisma } from '../index';
+import fs from 'fs';
+import path from 'path';
+
+const canonicalSheetLink = 'https://takeuforward.org/dsa/strivers-sde-sheet-top-coding-interview-problems';
+
+function normalizeSheetText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+const canonicalOrder = (() => {
+  try {
+    const filePath = path.join(process.cwd(), '191_striver_questions.json');
+    const rawData = fs.readFileSync(filePath, 'utf-8');
+    const questions = JSON.parse(rawData) as Array<{ topic: string; title: string; link: string | null }>;
+
+    return questions.map((question, index) => ({
+      key: normalizeSheetText(`${question.topic}::${question.title}`),
+      index
+    }));
+  } catch {
+    return [] as Array<{ key: string; index: number }>;
+  }
+})();
+
+function getQuestionOrder(question: { topic: string; title: string }) {
+  const key = normalizeSheetText(`${question.topic}::${question.title}`);
+  const exactMatch = canonicalOrder.find((item) => item.key === key);
+  return exactMatch?.index ?? Number.MAX_SAFE_INTEGER;
+}
 
 export class DSAService {
   static async getAllQuestions(userId: string) {
     const questions = await prisma.dSAQuestion.findMany({
-      orderBy: { id: 'asc' } // or whatever order
+      orderBy: { id: 'asc' }
+    });
+
+    const sortedQuestions = [...questions].sort((a, b) => {
+      const aOrder = getQuestionOrder(a);
+      const bOrder = getQuestionOrder(b);
+
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.title.localeCompare(b.title);
     });
 
     const progress = await prisma.userDSAProgress.findMany({
       where: { userId }
     });
 
-    return { questions, progress };
+    return { questions: sortedQuestions, progress, canonicalSheetLink };
   }
 
   static async getTodaySet(userId: string) {
@@ -23,17 +60,26 @@ export class DSAService {
     });
 
     if (!dailySet) {
-      const questions = await prisma.dSAQuestion.findMany({ take: 3 });
+      const questions = await prisma.dSAQuestion.findMany();
+      const sortedQuestions = [...questions].sort((a, b) => {
+        const aOrder = getQuestionOrder(a);
+        const bOrder = getQuestionOrder(b);
+
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.title.localeCompare(b.title);
+      });
       
-      if (questions.length === 0) {
+      if (sortedQuestions.length === 0) {
         return { message: "No questions in DB" };
       }
+
+      const selectedQuestions = sortedQuestions.slice(0, 3);
 
       dailySet = await prisma.dailyDSASet.create({
         data: {
           date: today,
           questions: {
-            connect: questions.map(q => ({ id: q.id }))
+            connect: selectedQuestions.map(q => ({ id: q.id }))
           }
         },
         include: { questions: true }

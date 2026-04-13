@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Map as MapIcon, Code2, LogOut } from 'lucide-react';
+import { LayoutDashboard, Map as MapIcon, Code2, BriefcaseBusiness, Lightbulb, Clock3, Target, CalendarClock, HeartPulse, Wallet, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export function Sidebar() {
@@ -12,6 +12,13 @@ export function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/roadmap', label: 'Roadmap', icon: MapIcon },
     { href: '/dsa', label: 'Daily DSA', icon: Code2 },
+    { href: '/daily-time', label: 'Daily Time', icon: Clock3 },
+    { href: '/learning-targets', label: 'Learning Targets', icon: Target },
+    { href: '/fitness', label: 'Fitness', icon: HeartPulse },
+    { href: '/financial-goals', label: 'Financial Goals', icon: Wallet },
+    { href: '/next-day-plan', label: 'Next Day Plan', icon: CalendarClock },
+    { href: '/job-applied', label: 'Job Applied', icon: BriefcaseBusiness },
+    { href: '/project-ideas', label: 'Project Ideas', icon: Lightbulb },
   ];
 
   return (

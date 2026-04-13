@@ -5,7 +5,7 @@ import { NoteEditor } from '@/components/dsa/NoteEditor';
 import { useState, useMemo } from 'react';
 
 export default function DSAPage() {
-  const { allQuestions, progress, isLoading, toggleSolved, saveNotes, isSavingNotes } = useDSA();
+  const { allQuestions, progress, isLoading, toggleSolved, saveNotes, isSavingNotes, canonicalSheetLink } = useDSA();
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
 
   const groupedQuestions = useMemo(() => {
@@ -90,6 +90,16 @@ export default function DSAPage() {
             <p className="text-[#6b6b8a] text-xs leading-[1.7] max-w-[560px]">
               Top coding interview problems, meticulously structured. Track your progress and complexities here.
             </p>
+            {canonicalSheetLink && (
+              <a
+                href={canonicalSheetLink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex mt-3 text-xs text-[#47c8ff] underline underline-offset-4 hover:text-[#47ff9a]"
+              >
+                Open official Striver SDE Sheet
+              </a>
+            )}
           </header>
 
           {/* Progress Tracker */}

@@ -46,6 +46,7 @@ export const useDSA = () => {
   return {
     dailySet: todayData?.set?.questions || [],
     allQuestions: allData?.questions || [],
+    canonicalSheetLink: allData?.canonicalSheetLink,
     progress: allData?.progress || todayData?.progress || [],
     message: todayData?.message,
     isLoading: isTodayLoading || isAllLoading,

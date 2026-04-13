@@ -14,12 +14,21 @@ model User {
   name         String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  streak       Int      @default(0)     
+  streak       Int      @default(0)
+  streakFreezeDays Int   @default(0)
+  streakAwardedWeeks Int @default(0)
   lastActive   DateTime @default(now())
 
   sessions        Session[]
   roadmapProgress UserProgress[]
   dsaProgress     UserDSAProgress[]
+  jobApplications JobApplication[]
+  projectIdeas    ProjectIdea[]
+  learningTarget  LearningTarget?
+  dailyTimeLogs   DailyTimeLog[]
+  nextDayPlan     NextDayPlan?
+  fitnessGoal     FitnessGoal?
+  financialGoal   FinancialGoal?
 }
 
 model Session {
@@ -117,4 +126,94 @@ model UserDSAProgress {
   question DSAQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questionId])
+}
+
+model JobApplication {
+  id                String   @id @default(uuid())
+  userId            String
+  companyName       String
+  applicationStatus String
+  shortlisted       String
+  interviewStatus   String   @default("N/A")
+  statusDetails     String?  @db.Text
+  ctc               String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectIdea {
+  id                  String   @id @default(uuid())
+  userId              String
+  ideaName            String
+  description         String   @db.Text
+  priority            String
+  researchReferences  String   @db.Text
+  expectedTimeToBuild String
+  startDate           DateTime
+  dueDate             DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningTarget {
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  dailyDsaTarget           String
+  dailyWebDevAiTarget      String
+  weekendProjectBuildTarget String
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyTimeLog {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime @db.Date
+  dsaHours    Float
+  devAiHours  Float
+  dsaWorkLog  String?  @db.Text
+  devAiWorkLog String? @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model NextDayPlan {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  briefPlan String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FitnessGoal {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  goals     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinancialGoal {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  goals         String   @db.Text
+  learningNotes String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
