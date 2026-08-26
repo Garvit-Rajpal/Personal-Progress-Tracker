@@ -29,6 +29,7 @@ model User {
   nextDayPlan     NextDayPlan?
   fitnessGoal     FitnessGoal?
   financialGoal   FinancialGoal?
+  roadmapLinks    UserRoadmapLink[]
 }
 
 model Session {
@@ -76,6 +77,26 @@ model RoadmapItem {
   
   phase       RoadmapPhase   @relation(fields: [phaseId], references: [id], onDelete: Cascade)
   progress    UserProgress[]
+}
+
+enum RoadmapLinkKind {
+  DEFAULT
+  CUSTOM
+}
+
+model UserRoadmapLink {
+  id        String          @id @default(uuid())
+  userId    String
+  title     String
+  url       String
+  notes     String?         @db.Text
+  kind      RoadmapLinkKind  @default(CUSTOM)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserProgress {

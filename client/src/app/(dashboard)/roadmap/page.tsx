@@ -1,10 +1,16 @@
 'use client';
+import { useState } from 'react';
 import { useRoadmap } from '@/hooks/useRoadmap';
 import { PhaseCard } from '@/components/roadmap/PhaseCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Head from 'next/head';
 
 export default function RoadmapPage() {
-  const { phases, progress, isLoading, toggleProgress } = useRoadmap();
+  const { phases, progress, links, isLoading, isLoadingLinks, toggleProgress, createLink } = useRoadmap();
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
+  const [notes, setNotes] = useState('');
 
   if (isLoading) {
     return (
@@ -28,6 +34,21 @@ export default function RoadmapPage() {
         toggleProgress({ itemId: p.itemId, completed: false });
       });
     }
+  };
+
+  const handleAddLink = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    createLink(
+      { title, url, notes },
+      {
+        onSuccess: () => {
+          setTitle('');
+          setUrl('');
+          setNotes('');
+        }
+      }
+    );
   };
 
   return (
@@ -83,6 +104,59 @@ export default function RoadmapPage() {
             A unified path for someone advanced in code, already learning GenAI, targeting a high-leverage engineering role.
           </p>
         </header>
+
+        <section className="mb-8 rounded-2xl border border-[#1e1e2e] bg-[#101018]/80 p-4 animate-fadeUp" style={{ animationDelay: '0.02s' }}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold tracking-[0.08em] uppercase text-[#e8ff47]">Your roadmap links</h2>
+              <p className="mt-1 text-xs leading-[1.7] text-[#6b6b8a]">
+                The app seeds the Striver sheet and built-in AI roadmap for every user. Add your own roadmap URLs here and they will stay linked to your account.
+              </p>
+            </div>
+          </div>
+
+          <form className="mt-4 grid gap-3 md:grid-cols-[1.2fr_1.2fr_1.6fr_auto]" onSubmit={handleAddLink}>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Roadmap title" className="border-[#1e1e2e] bg-[#0c0c12]" />
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://... or /roadmap" className="border-[#1e1e2e] bg-[#0c0c12]" />
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes"
+              rows={1}
+              className="min-h-10 w-full resize-y rounded-xl border border-[#1e1e2e] bg-[#0c0c12] px-3 py-2 text-sm text-[#e8e8f0] placeholder:text-[#6b6b8a] outline-none focus:border-[#c47bff]/60"
+            />
+            <Button type="submit" variant="secondary" className="h-10 border border-[#1e1e2e] bg-[#c47bff]/10 text-[#e8e8f0] hover:bg-[#c47bff]/20">
+              Save Link
+            </Button>
+          </form>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {isLoadingLinks ? (
+              <div className="text-xs text-[#6b6b8a]">Loading links...</div>
+            ) : links.length > 0 ? (
+              links.map((link: any) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target={link.url.startsWith('http') ? '_blank' : '_self'}
+                  rel="noreferrer"
+                  className="rounded-xl border border-[#1e1e2e] bg-[#0c0c12] p-4 transition-colors hover:border-[#c47bff]/50"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-semibold text-[#e8e8f0]">{link.title}</div>
+                    <span className={`text-[10px] tracking-[0.1em] uppercase ${link.kind === 'DEFAULT' ? 'text-[#e8ff47]' : 'text-[#c47bff]'}`}>
+                      {link.kind}
+                    </span>
+                  </div>
+                  <div className="mt-1 break-all text-xs text-[#6b6b8a]">{link.url}</div>
+                  {link.notes ? <p className="mt-2 text-xs leading-[1.6] text-[#9a9ab3]">{link.notes}</p> : null}
+                </a>
+              ))
+            ) : (
+              <div className="text-xs text-[#6b6b8a]">No links saved yet.</div>
+            )}
+          </div>
+        </section>
 
         {/* Callout */}
         <div 

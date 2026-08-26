@@ -66,13 +66,19 @@ export default function ProjectIdeasPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">Project Ideas</h1>
-        <p className="text-neutral-400 mt-2">Capture and prioritize ideas with timeline and references.</p>
+    <div className="relative space-y-6 max-w-7xl mx-auto overflow-hidden">
+      <div className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-14 top-24 h-64 w-64 rounded-full bg-emerald-400/5 blur-3xl" />
+      <div className="relative rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.95),rgba(17,24,39,0.8))] p-6 shadow-[0_30px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
+          <span className="h-2 w-2 rounded-full bg-cyan-300" />
+          Idea backlog
+        </div>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Project Ideas</h1>
+        <p className="mt-2 max-w-2xl text-neutral-300">Capture and prioritize ideas with timeline and references.</p>
       </div>
 
-      <Card className="bg-neutral-950 border-neutral-800">
+      <Card className="border-white/10 bg-white/[0.04]">
         <CardHeader>
           <CardTitle>Add Project Idea</CardTitle>
         </CardHeader>
@@ -82,12 +88,12 @@ export default function ProjectIdeasPage() {
               placeholder="Idea Name"
               value={ideaName}
               onChange={(e) => setIdeaName(e.target.value)}
-              className="bg-neutral-900 border-neutral-700"
+              className="bg-neutral-900/90 border-white/10"
             />
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as 'Low' | 'Medium' | 'High')}
-              className="h-8 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 text-sm text-white outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-8 w-full rounded-lg border border-white/10 bg-neutral-900/90 px-2.5 text-sm text-white outline-none focus-visible:border-cyan-400/60 focus-visible:ring-3 focus-visible:ring-cyan-400/15"
             >
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
@@ -97,19 +103,19 @@ export default function ProjectIdeasPage() {
               placeholder="Expected Time (e.g. 15 hours)"
               value={expectedTimeToBuild}
               onChange={(e) => setExpectedTimeToBuild(e.target.value)}
-              className="bg-neutral-900 border-neutral-700"
+              className="bg-neutral-900/90 border-white/10"
             />
             <Input
               placeholder="Research References"
               value={researchReferences}
               onChange={(e) => setResearchReferences(e.target.value)}
-              className="bg-neutral-900 border-neutral-700 md:col-span-2 lg:col-span-3"
+              className="bg-neutral-900/90 border-white/10 md:col-span-2 lg:col-span-3"
             />
             <textarea
               placeholder="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-24 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-2.5 py-2 text-sm text-white placeholder:text-neutral-500 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:col-span-2 lg:col-span-3"
+              className="min-h-24 w-full rounded-lg border border-white/10 bg-neutral-900/90 px-2.5 py-2 text-sm text-white placeholder:text-neutral-500 outline-none focus-visible:border-cyan-400/60 focus-visible:ring-3 focus-visible:ring-cyan-400/15 md:col-span-2 lg:col-span-3"
             />
             <div>
               <label className="text-xs text-neutral-400 mb-1 block">Start Date</label>
@@ -117,7 +123,7 @@ export default function ProjectIdeasPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-neutral-900 border-neutral-700"
+                className="bg-neutral-900/90 border-white/10"
               />
             </div>
             <div>
@@ -126,7 +132,7 @@ export default function ProjectIdeasPage() {
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="bg-neutral-900 border-neutral-700"
+                className="bg-neutral-900/90 border-white/10"
               />
             </div>
             <div className="flex items-end">
@@ -138,7 +144,7 @@ export default function ProjectIdeasPage() {
         </CardContent>
       </Card>
 
-      <Card className="bg-neutral-950 border-neutral-800">
+      <Card className="border-white/10 bg-white/[0.04]">
         <CardHeader>
           <CardTitle>Ideas Table</CardTitle>
         </CardHeader>
@@ -171,14 +177,14 @@ export default function ProjectIdeasPage() {
                   </tr>
                 ) : (
                   projectIdeas.map((idea: ProjectIdea, index: number) => (
-                    <tr key={`${idea.ideaName}-${index}`} className="border-b border-neutral-900 align-top">
-                      <td className="py-3 pr-4 font-medium">{idea.ideaName}</td>
+                    <tr key={`${idea.ideaName}-${index}`} className="border-b border-white/5 align-top transition-colors hover:bg-white/[0.03]">
+                      <td className="py-3 pr-4 font-medium text-neutral-100">{idea.ideaName}</td>
                       <td className="py-3 pr-4 text-neutral-300 max-w-xs whitespace-pre-wrap">{idea.description}</td>
-                      <td className="py-3 pr-4">{idea.priority}</td>
+                      <td className="py-3 pr-4 text-neutral-100">{idea.priority}</td>
                       <td className="py-3 pr-4 text-neutral-300">{idea.researchReferences}</td>
-                      <td className="py-3 pr-4">{idea.expectedTimeToBuild}</td>
-                      <td className="py-3 pr-4">{new Date(idea.startDate).toISOString().slice(0, 10)}</td>
-                      <td className="py-3 pr-4">{new Date(idea.dueDate).toISOString().slice(0, 10)}</td>
+                      <td className="py-3 pr-4 text-neutral-100">{idea.expectedTimeToBuild}</td>
+                      <td className="py-3 pr-4 text-neutral-100">{new Date(idea.startDate).toISOString().slice(0, 10)}</td>
+                      <td className="py-3 pr-4 text-neutral-100">{new Date(idea.dueDate).toISOString().slice(0, 10)}</td>
                     </tr>
                   ))
                 )}

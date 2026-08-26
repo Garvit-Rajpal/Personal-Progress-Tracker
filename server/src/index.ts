@@ -15,6 +15,8 @@ import dailyTimeLogRoutes from './routes/dailyTimeLog.routes';
 import nextDayPlanRoutes from './routes/nextDayPlan.routes';
 import fitnessGoalRoutes from './routes/fitnessGoal.routes';
 import financialGoalRoutes from './routes/financialGoal.routes';
+import roadmapLinkRoutes from './routes/roadmapLink.routes';
+import { BootstrapService } from './services/bootstrap.service';
 
 dotenv.config();
 
@@ -44,8 +46,17 @@ app.use('/api/daily-time-logs', dailyTimeLogRoutes);
 app.use('/api/next-day-plan', nextDayPlanRoutes);
 app.use('/api/fitness-goals', fitnessGoalRoutes);
 app.use('/api/financial-goals', financialGoalRoutes);
+app.use('/api/roadmap-links', roadmapLinkRoutes);
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+async function start() {
+  await BootstrapService.ensureSeedData();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+start().catch((error) => {
+  console.error('Failed to start server', error);
+  process.exit(1);
 });

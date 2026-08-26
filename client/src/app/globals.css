@@ -83,9 +83,9 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.18 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.24 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -121,7 +121,11 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(circle at top, rgba(71, 200, 255, 0.12), transparent 28%),
+      radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.08), transparent 20%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%);
   }
   html {
     @apply font-sans;

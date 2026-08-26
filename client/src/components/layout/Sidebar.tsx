@@ -22,8 +22,8 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="w-64 border-r border-neutral-800 bg-black min-h-screen p-4 flex flex-col">
-      <div className="mb-8 p-2">
+    <div className="sticky top-0 flex h-screen w-64 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(9,11,18,0.98),rgba(15,23,42,0.92))] text-neutral-100 p-4 backdrop-blur-xl">
+      <div className="mb-8 rounded-2xl border border-white/5 bg-white/5 p-3 shadow-inner shadow-black/20">
         <h1 className="text-xl font-bold tracking-tight text-white">LearnerTracker</h1>
       </div>
       <nav className="flex-1 space-y-2">
@@ -34,9 +34,11 @@ export function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                isActive ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-              }`}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all ${
+                isActive
+                  ? 'bg-white/10 text-white shadow-lg shadow-cyan-400/10 ring-1 ring-white/10'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                }`}
             >
               <Icon size={18} />
               {link.label}
@@ -47,7 +49,7 @@ export function Sidebar() {
       <div className="mt-auto pt-4 border-t border-neutral-800">
         <button
           onClick={logout}
-          className="flex w-full items-center gap-3 px-3 py-2 text-neutral-400 hover:text-white hover:bg-neutral-900 rounded-md transition-colors"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-neutral-400 transition-all hover:bg-white/5 hover:text-white"
         >
           <LogOut size={18} />
           Logout

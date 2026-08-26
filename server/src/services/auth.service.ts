@@ -2,6 +2,7 @@ import { prisma } from '../index';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
 import crypto from 'crypto';
+import { RoadmapLinkService } from './roadmapLink.service';
 
 export class AuthService {
   static async register(email: string, passwordHashRaw: string, name: string) {
@@ -12,6 +13,8 @@ export class AuthService {
     const user = await prisma.user.create({
       data: { email, passwordHash, name }
     });
+
+    await RoadmapLinkService.ensureDefaultLinks(user.id);
     
     return this.generateTokens(user.id);
   }

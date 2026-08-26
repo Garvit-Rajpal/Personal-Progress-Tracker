@@ -9,7 +9,7 @@ A full-stack, AI-ready web application designed for developers to track their le
 *   **Analytics Dashboard**: Visual representations of your learning progress, completed items, and daily streak.
 *   **User Authentication**: Secure JWT-based registration and login system.
 *   **Modern UI/UX**: Built with Tailwind CSS, Shadcn UI, Recharts, and Framer Motion for a premium, developer-focused aesthetic.
-*   **Dockerized Environment**: Effortless local setup using Docker Compose orchestrating the frontend, backend, and PostgreSQL database.
+*   **Dockerized Environment**: Effortless local setup using Docker orchestrating the frontend, backend, and PostgreSQL database.
 
 ## 🛠️ Tech Stack
 
@@ -53,7 +53,7 @@ personal-progress-tracker/
 The easiest way to run the entire stack (Database, Backend API, and Frontend web client) is to use Docker.
 
 ### Prerequisites
-*   [Docker](https://www.docker.com/get-started) and Docker Compose installed on your machine.
+*   [Docker](https://www.docker.com/get-started) installed on your machine.
 *   [Node.js](https://nodejs.org/) (if running locally without Docker)
 
 ### 1. Environment Variables
@@ -63,7 +63,7 @@ DATABASE_URL="postgresql://postgres:password@postgres:5432/personal_progress_ass
 JWT_SECRET="your_super_secret_jwt_key"
 JWT_REFRESH_SECRET="your_super_secret_refresh_key"
 PORT=5000
-CLIENT_URL="http://localhost:3000"
+CLIENT_URL="http://localhost:3010"
 ```
 
 Inside the `/client` directory, create a `.env.local` file:
@@ -73,9 +73,14 @@ NEXT_PUBLIC_API_URL="http://localhost:5001/api"
 
 ### 2. Start the Application via Docker
 
-From the root directory of the project, run:
+From the root directory of the project, run this in the foreground so the container logs stay visible in your terminal. If you want verbose build output, run the build step first and then start the stack:
 ```bash
 docker-compose up --build
+```
+Or, for more detailed build logs:
+```bash
+docker compose build --progress=plain
+docker compose up
 ```
 *Wait approximately ~30 seconds for the database and Next.js compiler to start.*
 
@@ -102,7 +107,7 @@ docker exec -it ppt_server node seed-191.js
 
 ### 5. Access the App
 Open your browser and navigate to:
-*   **Frontend UI:** `http://localhost:3000`
+*   **Frontend UI:** `http://localhost:3010`
 *   **Backend API:** `http://localhost:5001` (Docker mapped port)
 
 ---

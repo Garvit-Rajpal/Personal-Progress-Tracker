@@ -6,8 +6,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (including devDependencies for nodemon)
-RUN npm install
+# Install dependencies from the lockfile for reproducible builds
+RUN npm ci
 
 # Generate Prisma Client
 RUN npx prisma generate

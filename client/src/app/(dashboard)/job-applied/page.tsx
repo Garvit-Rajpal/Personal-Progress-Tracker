@@ -57,7 +57,7 @@ export default function JobAppliedPage() {
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus>('N/A');
   const [statusDetails, setStatusDetails] = useState('');
   const [ctc, setCtc] = useState('');
-  const [editableRows, setEditableRows] = useState<Record<string, EditableJob>>({});
+  const [rowOverrides, setRowOverrides] = useState<Record<string, Partial<EditableJob>>>({});
 
   useEffect(() => {
     if (!hasSeeded.current && !isLoading && jobApplications.length === 0) {
@@ -68,21 +68,21 @@ export default function JobAppliedPage() {
 
   const applications: JobApplication[] = jobApplications;
 
-  useEffect(() => {
-    const nextRows: Record<string, EditableJob> = {};
+  const editableRows = useMemo<Record<string, EditableJob>>(() => {
+    return applications.reduce<Record<string, EditableJob>>((rows, job) => {
+      const overrides = rowOverrides[job.id] || {};
 
-    applications.forEach((job) => {
-      nextRows[job.id] = {
-        applicationStatus: job.applicationStatus,
-        shortlisted: job.shortlisted,
-        interviewStatus: job.interviewStatus || 'N/A',
-        statusDetails: job.statusDetails || '',
-        ctc: job.ctc || ''
+      rows[job.id] = {
+        applicationStatus: overrides.applicationStatus ?? job.applicationStatus,
+        shortlisted: overrides.shortlisted ?? job.shortlisted,
+        interviewStatus: (overrides.interviewStatus as InterviewStatus) ?? job.interviewStatus ?? 'N/A',
+        statusDetails: overrides.statusDetails ?? job.statusDetails ?? '',
+        ctc: overrides.ctc ?? job.ctc ?? ''
       };
-    });
 
-    setEditableRows(nextRows);
-  }, [applications]);
+      return rows;
+    }, {});
+  }, [applications, rowOverrides]);
 
   const totalApplications = useMemo(() => applications.length, [applications]);
   const shortlistedCount = useMemo(
@@ -96,15 +96,15 @@ export default function JobAppliedPage() {
   );
 
   const updateEditableRow = (id: string, field: keyof EditableJob, value: string) => {
-    setEditableRows((prev) => {
-      const current = prev[id];
-      if (!current) return prev;
+    setRowOverrides((prev) => {
+      const current = prev[id] || {};
+      const next = { ...current, [field]: value } as Partial<EditableJob>;
 
-      const next = { ...current, [field]: value } as EditableJob;
       if (field === 'interviewStatus' && value === 'N/A') {
         next.statusDetails = '';
         next.ctc = '';
       }
+
       if (field === 'interviewStatus' && value !== 'Cleared') {
         next.ctc = '';
       }
@@ -168,14 +168,20 @@ export default function JobAppliedPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">Job Applied</h1>
-        <p className="text-neutral-400 mt-2">Track your job applications and shortlisted updates.</p>
+    <div className="relative space-y-6 max-w-6xl mx-auto overflow-hidden">
+      <div className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-10 top-28 h-64 w-64 rounded-full bg-emerald-400/5 blur-3xl" />
+      <div className="relative rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.95),rgba(17,24,39,0.8))] p-6 shadow-[0_30px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
+          <span className="h-2 w-2 rounded-full bg-cyan-300" />
+          Application pipeline
+        </div>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Job Applied</h1>
+        <p className="mt-2 max-w-2xl text-neutral-300">Track your job applications and shortlisted updates.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/[0.04]">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-neutral-400">Total Applications</CardTitle>
           </CardHeader>
@@ -184,7 +190,7 @@ export default function JobAppliedPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/[0.04]">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-neutral-400">Shortlisted</CardTitle>
           </CardHeader>
@@ -193,7 +199,7 @@ export default function JobAppliedPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/[0.04]">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-neutral-400">Interview Cleared</CardTitle>
           </CardHeader>
@@ -203,7 +209,7 @@ export default function JobAppliedPage() {
         </Card>
       </div>
 
-      <Card className="bg-neutral-950 border-neutral-800">
+      <Card className="border-white/10 bg-white/[0.04]">
         <CardHeader>
           <CardTitle>Add New Application</CardTitle>
         </CardHeader>
@@ -213,24 +219,24 @@ export default function JobAppliedPage() {
               placeholder="Company Name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="bg-neutral-900 border-neutral-700"
+              className="bg-neutral-900/90 border-white/10"
             />
             <Input
               placeholder="Application Status"
               value={applicationStatus}
               onChange={(e) => setApplicationStatus(e.target.value)}
-              className="bg-neutral-900 border-neutral-700"
+              className="bg-neutral-900/90 border-white/10"
             />
             <Input
               placeholder="Shortlisted (Yes / N/A)"
               value={shortlisted}
               onChange={(e) => setShortlisted(e.target.value)}
-              className="bg-neutral-900 border-neutral-700"
+              className="bg-neutral-900/90 border-white/10"
             />
             <select
               value={interviewStatus}
               onChange={(e) => setInterviewStatus(e.target.value as InterviewStatus)}
-              className="h-9 rounded-md border border-neutral-700 bg-neutral-900 px-3 text-sm text-white"
+              className="h-9 rounded-md border border-white/10 bg-neutral-900/90 px-3 text-sm text-white"
             >
               <option value="N/A">N/A</option>
               <option value="InProgress">InProgress</option>
@@ -242,7 +248,7 @@ export default function JobAppliedPage() {
                 placeholder="Status details"
                 value={statusDetails}
                 onChange={(e) => setStatusDetails(e.target.value)}
-                className="bg-neutral-900 border-neutral-700"
+                className="bg-neutral-900/90 border-white/10"
               />
             )}
             {interviewStatus === 'Cleared' && (
@@ -250,7 +256,7 @@ export default function JobAppliedPage() {
                 placeholder="CTC"
                 value={ctc}
                 onChange={(e) => setCtc(e.target.value)}
-                className="bg-neutral-900 border-neutral-700"
+                className="bg-neutral-900/90 border-white/10"
               />
             )}
             <Button onClick={addApplication} className="w-full" disabled={isAdding}>
@@ -284,20 +290,20 @@ export default function JobAppliedPage() {
                   if (!editable) return null;
 
                   return (
-                  <tr key={job.id} className="border-b border-neutral-900">
-                    <td className="py-3 pr-4">{job.companyName}</td>
+                    <tr key={job.id} className="border-b border-white/5 transition-colors hover:bg-white/[0.03] align-top">
+                    <td className="py-3 pr-4 text-neutral-100">{job.companyName}</td>
                     <td className="py-3 pr-4">
                       <Input
                         value={editable.applicationStatus}
                         onChange={(e) => updateEditableRow(job.id, 'applicationStatus', e.target.value)}
-                        className="bg-neutral-900 border-neutral-700"
+                        className="bg-neutral-900/90 border-white/10"
                       />
                     </td>
                     <td className="py-3 pr-4">
                       <Input
                         value={editable.shortlisted}
                         onChange={(e) => updateEditableRow(job.id, 'shortlisted', e.target.value)}
-                        className="bg-neutral-900 border-neutral-700"
+                        className="bg-neutral-900/90 border-white/10"
                       />
                     </td>
                     <td className="py-3 pr-4">
@@ -319,7 +325,7 @@ export default function JobAppliedPage() {
                         <Input
                           value={editable.statusDetails}
                           onChange={(e) => updateEditableRow(job.id, 'statusDetails', e.target.value)}
-                          className="bg-neutral-900 border-neutral-700"
+                          className="bg-neutral-900/90 border-white/10"
                         />
                       )}
                     </td>
@@ -328,7 +334,7 @@ export default function JobAppliedPage() {
                         <Input
                           value={editable.ctc}
                           onChange={(e) => updateEditableRow(job.id, 'ctc', e.target.value)}
-                          className="bg-neutral-900 border-neutral-700"
+                          className="bg-neutral-900/90 border-white/10"
                         />
                       ) : (
                         <span className="text-xs text-neutral-500">N/A</span>

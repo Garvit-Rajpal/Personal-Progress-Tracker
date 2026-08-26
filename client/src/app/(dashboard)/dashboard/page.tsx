@@ -1,6 +1,9 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { Activity, BookOpen, Target, Zap } from 'lucide-react';
 import {
@@ -21,12 +24,59 @@ import { useNextDayPlan } from '@/hooks/useNextDayPlan';
 import { useFitnessGoals } from '@/hooks/useFitnessGoals';
 import { useFinancialGoals } from '@/hooks/useFinancialGoals';
 
+type CategoryStat = {
+  type: string;
+  count: number | string;
+};
+
+type PieDatum = {
+  name: string;
+  value: number;
+};
+
+const GOAL_DATE_STORAGE_KEY = 'dashboard-goal-date';
+const DEFAULT_GOAL_DATE = '2026-06-21';
+
+const formatGoalDateLabel = (goalDate: string) => {
+  const parsedDate = new Date(`${goalDate}T23:59:59`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'Invalid date';
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(parsedDate);
+};
+
 export default function DashboardPage() {
   const { data, isLoading } = useAnalytics();
   const { learningTargets, isLoading: isLoadingTargets } = useLearningTargets();
   const { nextDayPlan, isLoading: isLoadingPlan } = useNextDayPlan();
   const { fitnessGoals, isLoading: isLoadingFitness } = useFitnessGoals();
   const { financialGoals, isLoading: isLoadingFinance } = useFinancialGoals();
+  const [goalDate, setGoalDate] = useState(() => {
+    if (typeof window === 'undefined') {
+      return DEFAULT_GOAL_DATE;
+    }
+
+    return window.localStorage.getItem(GOAL_DATE_STORAGE_KEY) || DEFAULT_GOAL_DATE;
+  });
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    window.localStorage.setItem(GOAL_DATE_STORAGE_KEY, goalDate);
+  }, [goalDate]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   if (isLoading) {
     return <div className="text-neutral-400">Loading analytics...</div>;
@@ -38,15 +88,16 @@ export default function DashboardPage() {
 
   const { user, roadmapProgress, dsaCompleted, categoryStats, timeTracking } = data;
   
-  const pieData = categoryStats?.map((c: any) => ({
+  const pieData = (categoryStats as CategoryStat[] | undefined)?.map((c) => ({
     name: c.type,
     value: Number(c.count)
-  })) || [];
+  })) || [] as PieDatum[];
 
   const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f97316'];
-  const goalDate = new Date('2026-06-21T23:59:59');
-  const now = new Date();
-  const daysLeft = Math.max(0, Math.ceil((goalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const parsedGoalDate = new Date(`${goalDate}T23:59:59`);
+  const daysLeft = Number.isNaN(parsedGoalDate.getTime())
+    ? 0
+    : Math.max(0, Math.ceil((parsedGoalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   const isGoalReached = daysLeft === 0;
   const timeTrendData = (timeTracking?.weekTrend || []).map(
     (entry: { date: string; dsaHours: number; devAiHours: number; totalHours: number }) => ({
@@ -56,14 +107,22 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-neutral-400 mt-2">Your learning progress and activity overview.</p>
+    <div className="relative space-y-8 max-w-6xl mx-auto overflow-hidden">
+      <div className="pointer-events-none absolute -right-16 top-0 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-24 top-24 h-72 w-72 rounded-full bg-emerald-400/5 blur-3xl" />
+      <div className="relative rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.95),rgba(17,24,39,0.8))] p-6 shadow-[0_30px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
+          <span className="h-2 w-2 rounded-full bg-cyan-300" />
+          Live overview
+        </div>
+        <div className="mt-4">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Dashboard</h1>
+          <p className="mt-2 max-w-2xl text-neutral-300">Your learning progress and activity overview, with the most important metrics surfaced first.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="bg-neutral-950 border-neutral-800">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-neutral-400">Current Streak</CardTitle>
             <Zap className="h-4 w-4 text-orange-500" />
@@ -74,7 +133,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-neutral-400">Roadmap Progress</CardTitle>
             <Target className="h-4 w-4 text-emerald-500" />
@@ -85,7 +144,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-neutral-400">DSA Solved</CardTitle>
             <BookOpen className="h-4 w-4 text-blue-500" />
@@ -96,7 +155,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-neutral-400">Activity Level</CardTitle>
             <Activity className="h-4 w-4 text-purple-500" />
@@ -106,7 +165,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-neutral-400">Time Logged</CardTitle>
           </CardHeader>
@@ -121,27 +180,47 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <Card className="bg-neutral-950 border-neutral-800 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card className="xl:col-span-2 border-white/10 bg-[linear-gradient(180deg,rgba(14,116,144,0.28),rgba(15,23,42,0.92))]">
           <CardHeader>
-            <CardTitle>June 21 Goal Countdown</CardTitle>
+            <CardTitle>Goal Countdown</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-3xl font-bold text-[#47c8ff]">
+            <div className="text-3xl font-bold text-cyan-200">
               {isGoalReached ? 'Goal Date Reached' : `${daysLeft} days left`}
             </div>
-            <div className="text-sm text-neutral-300 space-y-1">
-              <p>Target Date: 21 June 2026</p>
+            <div className="space-y-3 text-sm text-neutral-200">
+              <div className="grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
+                <div className="space-y-1">
+                  <label className="text-xs text-neutral-400">Target date</label>
+                  <Input
+                    type="date"
+                    value={goalDate}
+                    onChange={(e) => setGoalDate(e.target.value)}
+                    className="bg-neutral-900/90 border-white/10"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="border border-white/10 bg-white/5 text-neutral-100 hover:bg-white/10"
+                  onClick={() => setGoalDate(DEFAULT_GOAL_DATE)}
+                >
+                  Reset to 21 June 2026
+                </Button>
+              </div>
+              <p>Target Date: {formatGoalDateLabel(goalDate)}</p>
               <p>Primary Target: Crack a company role (preferably remote).</p>
               <p>Product Target: Build a production-ready SaaS web app.</p>
+              <p className="text-xs text-neutral-500">Changes save automatically in your browser.</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle>Learning Targets</CardTitle>
-            <Link href="/learning-targets" className="text-sm text-[#47c8ff] hover:text-[#47ff9a] underline underline-offset-4">
+            <Link href="/learning-targets" className="text-sm text-cyan-200 hover:text-emerald-300 underline underline-offset-4 transition-colors">
               Edit
             </Link>
           </CardHeader>
@@ -160,10 +239,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle>Next Day Plan</CardTitle>
-            <Link href="/next-day-plan" className="text-sm text-[#47c8ff] hover:text-[#47ff9a] underline underline-offset-4">
+            <Link href="/next-day-plan" className="text-sm text-cyan-200 hover:text-emerald-300 underline underline-offset-4 transition-colors">
               Edit
             </Link>
           </CardHeader>
@@ -180,10 +259,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle>Fitness Goals</CardTitle>
-            <Link href="/fitness" className="text-sm text-[#47c8ff] hover:text-[#47ff9a] underline underline-offset-4">
+            <Link href="/fitness" className="text-sm text-cyan-200 hover:text-emerald-300 underline underline-offset-4 transition-colors">
               Edit
             </Link>
           </CardHeader>
@@ -200,10 +279,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle>Financial Goals & Notes</CardTitle>
-            <Link href="/financial-goals" className="text-sm text-[#47c8ff] hover:text-[#47ff9a] underline underline-offset-4">
+            <Link href="/financial-goals" className="text-sm text-cyan-200 hover:text-emerald-300 underline underline-offset-4 transition-colors">
               Edit
             </Link>
           </CardHeader>
@@ -227,7 +306,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800">
+        <Card className="border-white/10 bg-white/4">
           <CardHeader>
             <CardTitle>Skill Distribution</CardTitle>
           </CardHeader>
@@ -244,7 +323,7 @@ export default function DashboardPage() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {pieData.map((entry: any, index: number) => (
+                    {pieData.map((entry, index: number) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -262,7 +341,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-neutral-950 border-neutral-800 xl:col-span-1">
+        <Card className="border-white/10 bg-white/4 xl:col-span-1">
           <CardHeader>
             <CardTitle>7-Day Time Trend</CardTitle>
           </CardHeader>

@@ -21,9 +21,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!mounted) return null;
 
   return (
-    <div className="flex min-h-screen bg-black text-white">
+    <div className="flex h-screen overflow-hidden bg-neutral-900 text-white">
       <Sidebar />
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="min-h-0 flex-1 overflow-y-auto p-8">
         {children}
       </main>
     </div>

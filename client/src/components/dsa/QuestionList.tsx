@@ -27,8 +27,8 @@ export function QuestionList({ questions, progress, onToggle, onSelect, selected
                 onClick={(e) => { e.stopPropagation(); onToggle({ questionId: q.id, solved: !isCompleted }); }}
                 className={`mt-1 shrink-0 flex items-center justify-center w-5 h-5 rounded border ${
                   isCompleted 
-                    ? 'bg-white border-white text-black' 
-                    : 'border-neutral-600 hover:border-neutral-400'
+                    ? 'bg-white border-white text-black dark:bg-neutral-700 dark:border-neutral-600 dark:text-white' 
+                    : 'border-neutral-600 hover:border-neutral-400 dark:hover:border-neutral-500'
                 } transition-colors`}
               >
                 {isCompleted && <Check size={14} strokeWidth={3} />}
