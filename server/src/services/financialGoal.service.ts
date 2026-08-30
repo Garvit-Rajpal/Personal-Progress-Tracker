@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const defaultFinancialGoal = {
   goals: 'Build 6 months emergency fund\nIncrease monthly savings by 10%',

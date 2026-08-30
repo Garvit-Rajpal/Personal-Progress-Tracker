@@ -1,4 +1,5 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
+import { userDateKey } from '../utils/time';
 import fs from 'fs';
 import path from 'path';
 
@@ -51,8 +52,10 @@ export class DSAService {
   }
 
   static async getTodaySet(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // ADR-4 — the key for *the user's* calendar day. V1 used server-local
+    // midnight, which is UTC in the container, so between 00:00 and 05:30 IST
+    // this resolved to yesterday and handed back yesterday's set.
+    const today = userDateKey();
 
     let dailySet = await prisma.dailyDSASet.findUnique({
       where: { date: today },

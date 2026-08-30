@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const validInterviewStatuses = ['N/A', 'InProgress', 'Cleared', 'Failed'];
 

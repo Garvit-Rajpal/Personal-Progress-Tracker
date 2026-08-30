@@ -8,7 +8,9 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/auth/login', data);
-      return res.data;
+      // M0-4 (ADR-14): /api/auth now answers with the `{ data }` envelope.
+      // The rest of the API is still bare and converts domain by domain.
+      return res.data.data;
     },
     onSuccess: (data) => {
       localStorage.setItem('accessToken', data.accessToken);
@@ -21,7 +23,8 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/auth/register', data);
-      return res.data;
+      // M0-4 (ADR-14) — see the comment in loginMutation.
+      return res.data.data;
     },
     onSuccess: (data) => {
       localStorage.setItem('accessToken', data.accessToken);

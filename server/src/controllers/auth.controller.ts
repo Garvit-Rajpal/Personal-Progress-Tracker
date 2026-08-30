@@ -1,32 +1,38 @@
-import { Request, Response } from 'express';
+/**
+ * M0-4 — converted to the `{ data }` envelope.
+ *
+ * Errors are forwarded to `errorHandler`, which owns the `{ error }` half. A
+ * controller that catches its own errors is a controller that decides status
+ * codes, and that decision belongs in exactly one place.
+ */
+import { NextFunction, Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
+import { sendData } from '../utils/respond';
+import { LoginInput, RefreshInput, RegisterInput } from '../schemas/auth.schema';
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name } = req.body;
-    const result = await AuthService.register(email, password, name);
-    res.status(201).json(result);
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
+    const { email, password, name } = req.body as RegisterInput;
+    sendData(res, 201, await AuthService.register(email, password, name));
+  } catch (e) {
+    next(e);
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
-    const result = await AuthService.login(email, password);
-    res.status(200).json(result);
-  } catch (e: any) {
-    res.status(401).json({ error: e.message });
+    const { email, password } = req.body as LoginInput;
+    sendData(res, 200, await AuthService.login(email, password));
+  } catch (e) {
+    next(e);
   }
 };
 
-export const refresh = async (req: Request, res: Response) => {
+export const refresh = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, refreshToken } = req.body;
-    const result = await AuthService.refresh(userId, refreshToken);
-    res.status(200).json(result);
-  } catch (e: any) {
-    res.status(401).json({ error: e.message });
+    const { userId, refreshToken } = req.body as RefreshInput;
+    sendData(res, 200, await AuthService.refresh(userId, refreshToken));
+  } catch (e) {
+    next(e);
   }
 };

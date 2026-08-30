@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 export class BootstrapService {
   static async ensureSeedData() {

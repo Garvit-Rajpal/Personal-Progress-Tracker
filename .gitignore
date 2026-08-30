@@ -64,3 +64,6 @@ Thumbs.db
 
 # temp files
 /tmp
+
+# database dumps taken by scripts/backup.sh — never commit personal data
+/backups/

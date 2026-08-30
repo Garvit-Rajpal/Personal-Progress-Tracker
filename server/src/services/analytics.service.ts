@@ -1,4 +1,5 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
+import { formatUserDate, weekRange } from '../utils/time';
 
 export class AnalyticsService {
   static async getOverview(userId: string) {
@@ -43,10 +44,10 @@ export class AnalyticsService {
       where: { userId, solved: true }
     });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - 6);
+    // ADR-4 — the rolling seven-day window ends on the *user's* today. V1
+    // derived both ends from server-local midnight and stepped days with
+    // setDate, so the whole dashboard trend slid by a day for 5h30m daily.
+    const { start: weekStart, end: today, days: weekDays } = weekRange();
 
     const todayTimeLog = await prisma.dailyTimeLog.findUnique({
       where: {
@@ -71,17 +72,17 @@ export class AnalyticsService {
     const weeklyDsaHours = weeklyLogs.reduce((sum, log) => sum + log.dsaHours, 0);
     const weeklyDevAiHours = weeklyLogs.reduce((sum, log) => sum + log.devAiHours, 0);
 
+    // `@db.Date` values come back as UTC midnight, so 'UTC' here reads the
+    // stored calendar date rather than re-interpreting it in another zone.
     const logMap = new Map(
       weeklyLogs.map((log) => [
-        log.date.toISOString().slice(0, 10),
+        formatUserDate(log.date, 'UTC'),
         { dsaHours: log.dsaHours, devAiHours: log.devAiHours }
       ])
     );
 
-    const weekTrend = Array.from({ length: 7 }).map((_, index) => {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + index);
-      const key = date.toISOString().slice(0, 10);
+    const weekTrend = weekDays.map((date) => {
+      const key = formatUserDate(date, 'UTC');
       const dayLog = logMap.get(key);
 
       return {

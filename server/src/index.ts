@@ -1,52 +1,24 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
+/**
+ * Process entrypoint: load env, seed, listen.
+ *
+ * ADR-13 — routing lives in `src/app.ts` and the Prisma client in
+ * `src/lib/prisma.ts`. This module exists to do the three things that must not
+ * happen on import.
+ */
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 
-import authRoutes from './routes/auth.routes';
-import roadmapRoutes from './routes/roadmap.routes';
-import dsaRoutes from './routes/dsa.routes';
-import analyticsRoutes from './routes/analytics.routes';
-import jobApplicationRoutes from './routes/jobApplication.routes';
-import projectIdeaRoutes from './routes/projectIdea.routes';
-import learningTargetRoutes from './routes/learningTarget.routes';
-import dailyTimeLogRoutes from './routes/dailyTimeLog.routes';
-import nextDayPlanRoutes from './routes/nextDayPlan.routes';
-import fitnessGoalRoutes from './routes/fitnessGoal.routes';
-import financialGoalRoutes from './routes/financialGoal.routes';
-import roadmapLinkRoutes from './routes/roadmapLink.routes';
-import { BootstrapService } from './services/bootstrap.service';
-
+// Load-bearing ordering, and the reason `./app` is imported below rather than
+// at the top of the file: importing the app transitively constructs the Prisma
+// client, which reads DATABASE_URL exactly once. If dotenv has not run by then,
+// a local `npm run dev` gets an undefined connection string. TypeScript emits
+// CommonJS requires in source order, so this holds — do not let an import
+// sorter move it.
 dotenv.config();
 
-export const prisma = new PrismaClient();
-const app = express();
+import app from './app';
+import { BootstrapService } from './services/bootstrap.service';
+
 const PORT = process.env.PORT || 5000;
-
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-
-// Basic health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/roadmap', roadmapRoutes);
-app.use('/api/dsa', dsaRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/job-applications', jobApplicationRoutes);
-app.use('/api/project-ideas', projectIdeaRoutes);
-app.use('/api/learning-targets', learningTargetRoutes);
-app.use('/api/daily-time-logs', dailyTimeLogRoutes);
-app.use('/api/next-day-plan', nextDayPlanRoutes);
-app.use('/api/fitness-goals', fitnessGoalRoutes);
-app.use('/api/financial-goals', financialGoalRoutes);
-app.use('/api/roadmap-links', roadmapLinkRoutes);
 
 async function start() {
   await BootstrapService.ensureSeedData();

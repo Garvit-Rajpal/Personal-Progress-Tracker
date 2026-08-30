@@ -1,13 +1,17 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
 import crypto from 'crypto';
 import { RoadmapLinkService } from './roadmapLink.service';
+import { ApiError } from '../utils/apiError';
 
 export class AuthService {
   static async register(email: string, passwordHashRaw: string, name: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) throw new Error('Email already in use');
+    // M0-4 — a duplicate email is CONFLICT (409), not a generic 400. The unique
+    // index is still the real guard; this is the readable message for the race
+    // it does not lose.
+    if (existing) throw ApiError.conflict('Email already in use');
     
     const passwordHash = await hashPassword(passwordHashRaw);
     const user = await prisma.user.create({
@@ -21,10 +25,12 @@ export class AuthService {
 
   static async login(email: string, passwordRaw: string) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new Error('Invalid credentials');
-    
+    // Identical error for an unknown email and a wrong password — telling them
+    // apart turns the login form into a registered-address oracle.
+    if (!user) throw ApiError.unauthorized('Invalid credentials');
+
     const isValid = await verifyPassword(passwordRaw, user.passwordHash);
-    if (!isValid) throw new Error('Invalid credentials');
+    if (!isValid) throw ApiError.unauthorized('Invalid credentials');
     
     return this.generateTokens(user.id);
   }
@@ -34,8 +40,13 @@ export class AuthService {
     const refreshTokenPlain = crypto.randomBytes(40).toString('hex');
     const refreshTokenHash = await hashPassword(refreshTokenPlain);
     
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    // A refresh token's lifetime is a duration, not a calendar day, so it is
+    // expressed as one. `setDate` would have resolved in the server's timezone
+    // — harmless here, but ADR-4's rule is that no day arithmetic in this app
+    // depends on the container clock, and an exception nobody can see is how
+    // the rule erodes.
+    const REFRESH_TOKEN_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_LIFETIME_MS);
     
     await prisma.session.create({
       data: {
@@ -61,7 +72,7 @@ export class AuthService {
       }
     }
     
-    if (!validSessionId) throw new Error('Invalid or expired refresh token');
+    if (!validSessionId) throw ApiError.unauthorized('Invalid or expired refresh token');
     
     await prisma.session.delete({ where: { id: validSessionId } });
     return this.generateTokens(userId);

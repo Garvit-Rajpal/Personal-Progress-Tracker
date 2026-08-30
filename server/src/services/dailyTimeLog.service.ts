@@ -1,4 +1,5 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
+import { differenceInDateKeys, parseUserDate, userDateKey } from '../utils/time';
 
 export class DailyTimeLogService {
   private static readonly MAX_FREEZE_DAYS = 5;
@@ -20,13 +21,13 @@ export class DailyTimeLogService {
       devAiWorkLog?: string;
     }
   ) {
-    const parsedDate = new Date(payload.date);
+    // ADR-4 — a bare YYYY-MM-DD is already a calendar date and must not be
+    // shifted by anyone's offset; anything else is keyed in the user's zone.
+    // V1's `new Date(payload.date)` + `setHours(0,0,0,0)` moved date-only
+    // payloads a day backwards in every zone ahead of UTC. Throws on garbage.
+    const parsedDate = parseUserDate(payload.date);
     const dsaWorkLog = payload.dsaWorkLog?.trim() || null;
     const devAiWorkLog = payload.devAiWorkLog?.trim() || null;
-
-    if (Number.isNaN(parsedDate.getTime())) {
-      throw new Error('Invalid date');
-    }
 
     if (payload.dsaHours < 0 || payload.devAiHours < 0) {
       throw new Error('Hours cannot be negative');
@@ -39,8 +40,6 @@ export class DailyTimeLogService {
     if (devAiWorkLog && devAiWorkLog.length > 300) {
       throw new Error('Dev + AI work log must be 300 characters or less');
     }
-
-    parsedDate.setHours(0, 0, 0, 0);
 
     const existingLog = await prisma.dailyTimeLog.findUnique({
       where: {
@@ -106,10 +105,10 @@ export class DailyTimeLogService {
     if (user.streak === 0) {
       nextStreak = 1;
     } else {
-      const lastActiveDate = new Date(user.lastActive);
-      lastActiveDate.setHours(0, 0, 0, 0);
-
-      const dayDiff = Math.floor((qualifiedDate.getTime() - lastActiveDate.getTime()) / 86_400_000);
+      // ADR-4 — compare calendar days, not elapsed milliseconds. `lastActive`
+      // is written below as a date key, so re-keying it in UTC is idempotent.
+      const lastActiveDate = userDateKey(user.lastActive, 'UTC');
+      const dayDiff = differenceInDateKeys(qualifiedDate, lastActiveDate);
 
       if (dayDiff <= 0) {
         return;

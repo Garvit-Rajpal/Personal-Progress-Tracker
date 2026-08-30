@@ -1,4 +1,4 @@
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const defaultFitnessGoal = {
   goals: '5 workouts per week\n10k steps daily\nStrength + mobility split'
