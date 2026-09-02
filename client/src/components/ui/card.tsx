@@ -12,7 +12,11 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-4 overflow-hidden rounded-2xl bg-neutral-900/80 py-4 text-sm text-neutral-100 ring-1 ring-white/10 shadow-[0_24px_80px_-48px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_30px_90px_-50px_rgba(71,200,255,0.25)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        // ADR-16 — tokens only. The V1 card hardcoded bg-neutral-900/80 and
+        // ring-white/10, which is why no light theme was possible.
+        // No hover lift and no blur: a data card that moves under the cursor
+        // makes a dense dashboard feel unstable (docs/design.md §6).
+        "group/card flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-card py-5 text-sm text-card-foreground shadow-xs has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
         className
       )}
       {...props}
@@ -25,7 +29,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-4 group-data-[size=sm]/card:px-3 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
+        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-5 group-data-[size=sm]/card:px-3 has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-4 group-data-[size=sm]/card:[.border-b]:pb-3",
         className
       )}
       {...props}
@@ -38,7 +42,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "text-base leading-snug font-medium text-white/90 group-data-[size=sm]/card:text-sm",
+        "text-base leading-snug font-semibold text-foreground group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}
@@ -73,7 +77,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-4 group-data-[size=sm]/card:px-3", className)}
+      className={cn("px-5 group-data-[size=sm]/card:px-3", className)}
       {...props}
     />
   )
@@ -84,7 +88,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t border-white/10 bg-white/5 p-4 group-data-[size=sm]/card:p-3",
+        "flex items-center rounded-b-xl border-t border-border bg-muted/50 p-4 group-data-[size=sm]/card:p-3",
         className
       )}
       {...props}

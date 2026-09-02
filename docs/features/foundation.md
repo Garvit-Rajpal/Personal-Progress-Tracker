@@ -105,6 +105,43 @@ Carried forward deliberately; each has an owner.
 | No client tests | out of V2 scope by decision (`CLAUDE.md` §Stack) |
 | Historical rows written before M0-3 keep whatever date V1 gave them | ADR-4 — no retroactive rewrite |
 
+## Recovering the DSA solved history (2026-08-30)
+
+Recorded because it will be needed again if this ever breaks, and because the
+reason the numbers can be trusted matters more than the numbers.
+
+The old seeders destroyed 144 solved flags (ADR-15). They were recoverable from
+takeuforward, in two halves:
+
+| Half | Where | Auth |
+|---|---|---|
+| Which problems are solved | `GET https://backend-go.takeuforward.org/api/v1/progress/subject/strivers-sde-sheet` -> `solved_problem_ids` | yes - the user's session |
+| What those ids mean | the **public** sheet page's Next.js RSC payload | **no** |
+
+The ids are global platform ids (4 to 2861 for a 191-problem sheet), not sheet
+positions, so the second half is not optional. No API serves it: the problem list
+is server-rendered. It is recoverable anyway because Next.js streams RSC flight
+data as `self.__next_f.push([1,"<json-string-chunk>"])` - decode each chunk as a
+JSON string, concatenate, and the result contains
+`"category_name":"...","problems":[{"problem_id":"911","problem_name":"Set Matrix Zeroes",...}]`
+for all 191.
+
+**Three independent checks had to agree before anything was written:**
+
+1. All 144 ids resolved to titles, and all 144 titles matched our catalogue
+   exactly - zero fuzzy fallbacks needed.
+2. The difficulty split came out **Easy 23 / Medium 69 / Hard 52**, which is
+   what takeuforward's own progress widget reports.
+3. Per-topic counts reproduced the screenshots, including Arrays at 5/6 with
+   *Next Permutation* as the single gap.
+
+Any one of those could pass by luck. Three agreeing could not.
+
+The importer (`import-tuf.js`, scratchpad) is dry-run by default, only ever
+upserts `solved: true`, and proposes fuzzy title matches for review rather than
+applying them - our stored titles have drifted from takeuforward's display names
+in places (`"Rotate matrix by 90 degrees"` versus `"Rotate Matrix"`).
+
 ## Verifying it
 
 ```bash

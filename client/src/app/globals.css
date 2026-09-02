@@ -1,43 +1,68 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+
+/* ADR-16 — this file is the ONLY place a colour literal may appear in the
+   client. Every value below is fixed in docs/design.md; if the two disagree,
+   this file is wrong. `client/scripts/check-tokens.mjs` enforces the rule.
+
+   Note the removed `@import "shadcn/tailwind.css"` — `shadcn` is a CLI, and
+   node_modules/shadcn ships no such stylesheet. The import never resolved. */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+
+  /* docs/design.md §4 — V1 declared `--font-sans: var(--font-sans)`, a
+     self-reference resolving to nothing, so Geist never actually loaded. */
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+
   --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Domain tier — docs/design.md §3.4. chart-N aliases the pillar in pillar
+     order, so a series and its badge are never a different colour. */
+  --color-pillar-craft: var(--pillar-craft);
+  --color-pillar-devai: var(--pillar-devai);
+  --color-pillar-fitness: var(--pillar-fitness);
+  --color-pillar-finance: var(--pillar-finance);
+  --color-pillar-career: var(--pillar-career);
+  --color-pillar-health: var(--pillar-health);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -47,119 +72,161 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Light ──────────────────────────────────────────── docs/design.md §3.1 */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  color-scheme: light;
+
+  --background: oklch(0.985 0.002 265);
+  --foreground: oklch(0.21 0.021 265);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.21 0.021 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
+  --popover-foreground: oklch(0.21 0.021 265);
+
+  --primary: oklch(0.52 0.19 275);
+  --primary-foreground: oklch(0.99 0.002 265);
+  --secondary: oklch(0.965 0.004 265);
+  --secondary-foreground: oklch(0.21 0.021 265);
+  --muted: oklch(0.965 0.004 265);
+  --muted-foreground: oklch(0.545 0.025 265);
+  --accent: oklch(0.955 0.012 275);
+  --accent-foreground: oklch(0.35 0.12 275);
+
+  --destructive: oklch(0.53 0.2 25);
+  --destructive-foreground: oklch(0.99 0.002 265);
+
+  /* Opaque on purpose. V1 used oklch(1 0 0 / 10%), which composites
+     differently over every surface it crosses (docs/design.md §3.2). */
+  --border: oklch(0.905 0.006 265);
+  --border-strong: oklch(0.66 0.015 265);
+  --input: oklch(0.905 0.006 265);
+  --ring: oklch(0.52 0.19 275);
+
+  --pillar-craft: oklch(0.52 0.19 275);
+  --pillar-devai: oklch(0.52 0.21 305);
+  --pillar-fitness: oklch(0.52 0.13 160);
+  --pillar-finance: oklch(0.55 0.13 75);
+  --pillar-career: oklch(0.53 0.11 230);
+  --pillar-health: oklch(0.55 0.19 15);
+
+  --success: oklch(0.52 0.13 155);
+  --warning: oklch(0.55 0.13 75);
+  --danger: oklch(0.53 0.2 25);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.21 0.021 265);
+  --sidebar-accent: oklch(0.955 0.012 275);
+  --sidebar-accent-foreground: oklch(0.35 0.12 275);
+  --sidebar-border: oklch(0.905 0.006 265);
+  --sidebar-ring: oklch(0.52 0.19 275);
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ── Dark ───────────────────────────────────────────── docs/design.md §3.2 */
 .dark {
-  --background: oklch(0.18 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.24 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+
+  --background: oklch(0.175 0.014 265);
+  --foreground: oklch(0.96 0.005 265);
+  --card: oklch(0.215 0.016 265);
+  --card-foreground: oklch(0.96 0.005 265);
+  --popover: oklch(0.215 0.016 265);
+  --popover-foreground: oklch(0.96 0.005 265);
+
+  /* The accent lifts in dark and its foreground flips to dark text — a hue
+     that clears 4.5:1 on white is unreadable on a near-black canvas
+     (docs/design.md §2, "the rule most dual-theme palettes get wrong"). */
+  --primary: oklch(0.7 0.15 275);
+  --primary-foreground: oklch(0.18 0.03 275);
+  --secondary: oklch(0.26 0.017 265);
+  --secondary-foreground: oklch(0.96 0.005 265);
+  --muted: oklch(0.26 0.017 265);
+  --muted-foreground: oklch(0.7 0.018 265);
+  --accent: oklch(0.28 0.03 275);
+  --accent-foreground: oklch(0.88 0.06 275);
+
+  --destructive: oklch(0.7 0.17 20);
+  --destructive-foreground: oklch(0.18 0.03 20);
+
+  --border: oklch(0.3 0.016 265);
+  --border-strong: oklch(0.42 0.02 265);
+  --input: oklch(0.3 0.016 265);
+  --ring: oklch(0.7 0.15 275);
+
+  --pillar-craft: oklch(0.72 0.15 275);
+  --pillar-devai: oklch(0.73 0.16 305);
+  --pillar-fitness: oklch(0.75 0.14 160);
+  --pillar-finance: oklch(0.78 0.14 80);
+  --pillar-career: oklch(0.74 0.11 230);
+  --pillar-health: oklch(0.72 0.15 15);
+
+  --success: oklch(0.75 0.14 155);
+  --warning: oklch(0.78 0.14 80);
+  --danger: oklch(0.7 0.17 20);
+
+  --sidebar: oklch(0.195 0.015 265);
+  --sidebar-foreground: oklch(0.96 0.005 265);
+  --sidebar-accent: oklch(0.28 0.03 275);
+  --sidebar-accent-foreground: oklch(0.88 0.06 275);
+  --sidebar-border: oklch(0.3 0.016 265);
+  --sidebar-ring: oklch(0.7 0.15 275);
+}
+
+/* Series order is pillar order, so the donut and the legend agree with the
+   badge on every other page (docs/design.md §8). */
+:root,
+.dark {
+  --chart-1: var(--pillar-craft);
+  --chart-2: var(--pillar-devai);
+  --chart-3: var(--pillar-fitness);
+  --chart-4: var(--pillar-finance);
+  --chart-5: var(--pillar-career);
+  --chart-6: var(--pillar-health);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground antialiased;
-    background-image:
-      radial-gradient(circle at top, rgba(71, 200, 255, 0.12), transparent 28%),
-      radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.08), transparent 20%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%);
-  }
+
   html {
     @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    /* No gradient wash. V1 painted three radial gradients onto body, which
+       reads as grime on any light background (docs/design.md §1). */
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* docs/design.md §9.3 — a focus ring is never removed without a
+     replacement. */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
   }
 }
 
-@keyframes orb-float {
-  0% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-16px) scale(1.05);
-  }
-  100% {
-    transform: translateY(0px) scale(1);
-  }
-}
-
-@keyframes orb-float-delayed {
-  0% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(18px) scale(1.08);
-  }
-  100% {
-    transform: translateY(0px) scale(1);
+@layer utilities {
+  /* docs/design.md §4 — proportional digits change width as a value ticks,
+     so a column of figures visibly shifts on every refetch. Applied here
+     rather than per component so no metric can forget it. */
+  .metric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.02em;
   }
 }
 
-.animate-orb-float {
-  animation: orb-float 8s ease-in-out infinite;
-}
-
-.animate-orb-float-delayed {
-  animation: orb-float-delayed 9s ease-in-out infinite;
+/* docs/design.md §6 — honoured globally so no component has to opt in. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

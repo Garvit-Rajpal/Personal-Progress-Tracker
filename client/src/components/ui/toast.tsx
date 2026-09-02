@@ -42,26 +42,31 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           const isDestructive = item.variant === 'destructive';
           const Icon = isDestructive ? AlertCircle : CheckCircle2;
           return (
+            // ADR-16 — tokens only; the variant is carried by the icon and
+            // the left rule, not by tinting the whole surface.
             <div
               key={item.id}
-              className={`rounded-xl border px-4 py-3 shadow-xl backdrop-blur-md transition-all ${
-                isDestructive
-                  ? 'border-red-500/40 bg-red-950/90 text-red-50'
-                  : 'border-emerald-500/30 bg-neutral-950/90 text-white'
+              role="status"
+              aria-live={isDestructive ? 'assertive' : 'polite'}
+              className={`rounded-lg border border-border bg-card px-4 py-3 text-card-foreground shadow-lg border-l-2 ${
+                isDestructive ? 'border-l-danger' : 'border-l-success'
               }`}
             >
               <div className="flex items-start gap-3">
-                <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${isDestructive ? 'text-red-400' : 'text-emerald-400'}`} />
+                <Icon
+                  aria-hidden
+                  className={`mt-0.5 h-5 w-5 shrink-0 ${isDestructive ? 'text-danger' : 'text-success'}`}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold">{item.title}</div>
                   {item.description ? (
-                    <div className="mt-1 text-xs leading-5 text-neutral-300">{item.description}</div>
+                    <div className="mt-1 text-xs leading-5 text-muted-foreground">{item.description}</div>
                   ) : null}
                 </div>
                 <button
                   type="button"
                   onClick={() => removeToast(item.id)}
-                  className="rounded-md p-1 text-neutral-400 transition hover:bg-white/10 hover:text-white"
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   aria-label="Dismiss toast"
                 >
                   <X className="h-4 w-4" />

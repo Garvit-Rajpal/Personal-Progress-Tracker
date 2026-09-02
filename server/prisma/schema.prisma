@@ -127,6 +127,11 @@ model DSAQuestion {
 
   dailySets    DailyDSASet[] 
   userProgress UserDSAProgress[]
+
+  /// ADR-15. The natural key of a sheet question. Makes the catalogue seed an
+  /// upsert instead of a delete-and-recreate, which is what stops a re-seed
+  /// cascading UserDSAProgress away.
+  @@unique([topic, title])
 }
 
 model DailyDSASet {

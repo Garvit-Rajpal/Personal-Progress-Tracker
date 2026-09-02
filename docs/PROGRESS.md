@@ -5,7 +5,9 @@ Only **active or incomplete** work lives here; completed detail moves into the
 feature doc under `docs/features/`. Updated at the end of every milestone
 (`CLAUDE.md` §Documentation, rule 1).
 
-_Last updated: 2026-08-26 — Milestone 0 complete, 180 tests green._
+_Last updated: 2026-08-30 — Milestone 0 complete; DSA seed data-loss bug fixed
+(ADR-15); 144/191 solved history recovered; the AI curriculum revised for 2026;
+Milestone D0 (design foundation, ADR-16) complete. 292 tests green._
 
 ---
 
@@ -36,11 +38,55 @@ family rather than all at once.
 
 **Milestone A not started.** 27 steps remain across A and B (`docs/LLD_v2.md` §7).
 
+**Out-of-order work done on 2026-08-30, at the owner's request (ADR-15).** The
+DSA catalogue was found holding an 18-question sample instead of the 191-question
+sheet, with zero progress rows. Root cause: `BootstrapService` ran
+`prisma/seed-dsa.js` — a *sample* seeder that opened with `deleteMany()` — and
+`UserDSAProgress.questionId` cascades on delete, so every run destroyed the
+user's solved history. Fixed by giving `DSAQuestion` a natural key
+(`@@unique([topic, title])`, migration `20260830150000`) and replacing both
+seeders with an idempotent upsert that deletes nothing and never writes solved
+flags. **This is part of MB-2 done early** — see ADR-15 for why it could not
+wait. MB-2's real scope (the curriculum parser and the *roadmap* seed) is
+untouched and still owed.
+
+**The AI engineering curriculum was revised for the 2026 market** (2026-08-30).
+`docs/curriculum/ai-engineering.md` went from 37 items to 50: a new *Context
+Engineering* phase, MCP promoted from one line to a five-item phase, plus
+OpenTelemetry GenAI semantic conventions and streaming failure modes. It is
+still unseeded — seeding is MB-3/MB-4 and needs MB-1 and MB-2 first. A new
+`tests/unit/curriculumFormat.test.ts` enforces the LLD §6 parser contract on
+both curriculum files so the markdown stays machine-readable.
+
+**Milestone D0 — design foundation — complete (2026-08-30, ADR-16).** Inserted
+ahead of MA-1 at the owner's request. Client-only: no table, no column, no
+migration, no server file, so the suite is untouched at 292. Full detail is in
+`docs/features/design-system.md`; the short version:
+
+- The client is now **theme-dual** — light, dark or follow-the-OS, with a
+  toggle and no flash of the wrong theme on first paint. It was previously
+  dark-only by `<html className="dark">`, and light mode was unreachable.
+- **547 hardcoded colour literals across 25 files became zero.** `dark:` had
+  appeared 7 times in the whole client; the shadcn token layer was ~95% unused
+  and the `ui/` primitives were themselves dark-only.
+- `client/scripts/check-tokens.mjs` (`npm run check:tokens`) fails the build if
+  a literal reappears — the same guard shape that keeps ADR-4 true.
+- `docs/design.md` is now the source of truth for colour, the way
+  `docs/cadence.md` is for numbers.
+- The dashboard leads with **today against the week** rather than a stale
+  countdown, and the streak is a chip, not the headline (`docs/cadence.md` §6).
+- Four latent bugs fixed on the way: Geist never loaded (`--font-sans`
+  self-reference), `bg-white/4` left all five stat tiles with no background,
+  the goal countdown defaulted to a date already in the past, and the auth
+  pages rendered an ADR-14 error **object** as a React child.
+
+`npm run lint` is green for the first time; it was already failing before D0.
+
 ---
 
 ## Next up
 
-Milestone 0 is closed. **Milestone A starts at MA-1.**
+Milestone D0 is closed. **Milestone A starts at MA-1**, unaffected by it.
 
 1. **MA-1 — the metric engine schema.** `PillarType`, `MetricDirection`,
    `MetricCadence`, `GoalStatus` enums plus `Metric`, `MetricEntry` and `Goal`
@@ -57,7 +103,19 @@ Milestone 0 is closed. **Milestone A starts at MA-1.**
    `scripts/backup.sh --label pre-MA-4 --verify` first.** This is the point
    where that script stops being theoretical.
 
-Before starting anything: `cd server && npm test` must report **180 passing**.
+~~Also outstanding: the DSA solved history has to be re-entered once.~~
+**Closed 2026-08-30 — recovered, not re-entered.** All 191 questions are back in
+the catalogue and **144 are marked solved**, imported from takeuforward rather
+than retyped. Three independent checks agreed before anything was written: 144/144
+titles matched exactly with no fuzzy fallbacks, the difficulty split came out Easy
+23 / Medium 69 / Hard 52 exactly as takeuforward reports it, and the per-topic
+counts reproduced the screenshots. Verified to survive a re-seed and a container
+restart. Method is written up in `docs/features/foundation.md`.
+
+The old "140 solved" was never a record of anything — the previous seeder wrote
+it with `slice(0, 140)`. The 144 now in the database are real.
+
+Before starting anything: `cd server && npm test` must report **292 passing**.
 If it does not, fix that before writing a line of Milestone A.
 
 ---
@@ -109,18 +167,38 @@ Test breakdown:
 
 | Suite | Tests |
 |---|---|
+| `tests/unit/curriculumFormat.test.ts` | 86 |
 | `tests/unit/time.test.ts` | 38 |
 | `tests/unit/repoScaffolding.test.ts` | 29 |
+| `tests/unit/noDestructiveDsaSeeds.test.ts` | 13 |
 | `tests/unit/testDatabaseIsolation.test.ts` | 9 |
 | `tests/unit/noInlineDayBoundaries.test.ts` | 7 |
 | `tests/service/dayBoundary.service.test.ts` | 22 |
 | `tests/service/auth.service.test.ts` | 18 |
 | `tests/service/dsa.service.test.ts` | 16 |
 | `tests/service/roadmap.service.test.ts` | 13 |
+| `tests/service/dsaSeed.test.ts` | 13 |
 | `tests/service/harness.test.ts` | 4 |
 | `tests/integration/authEnvelope.test.ts` | 22 |
 | `tests/integration/health.test.ts` | 2 |
-| **Total** | **180** |
+| **Total** | **292** |
+
+180 of these closed Milestone 0; the rest came with ADR-15 and the curriculum
+format contract.
+
+### Milestone D0 — Design foundation (out of band, ADR-16)
+
+| # | Step | Status |
+|---|---|---|
+| D0-1 | Token architecture + theme runtime (`globals.css`, `lib/theme.ts`, provider, toggle) | ✅ |
+| D0-2 | `ui/` primitives re-tokenized (5) and added (7) | ✅ |
+| D0-3 | Shell — `AppHeader`, `PageHeader`, responsive `Sidebar`, nav config | ✅ |
+| D0-4 | Dashboard rebuilt on `components/dashboard/` | ✅ |
+| D0-5 | Remaining 12 routes migrated; both injected `<style>` blocks deleted | ✅ |
+| D0-6 | Token guard + `docs/design.md`, ADR-16, feature doc, this file | ✅ |
+
+Not in `docs/LLD_v2.md` §7 — theming appears in neither design doc. It does not
+reorder A before B; it delays MA-1 by one milestone.
 
 ### Milestone A — Life pillars become real
 
@@ -173,9 +251,11 @@ Test breakdown:
 | Daily DSA set hardcoded to 3 questions | `dsa.service.ts` `slice(0, 3)` | MB-6 |
 | Fitness and Finance are free-text blobs with no history | `fitnessGoal.service.ts`, `financialGoal.service.ts` | MA-4, MA-8, MA-10 |
 | Health has no model at all | — | MA-9 |
-| Bootstrap seed guard closes permanently once one phase exists, so syllabus edits never apply; also `execFileSync`s during startup | `bootstrap.service.ts` | MB-2 |
+| Bootstrap **roadmap** seed guard closes permanently once one phase exists, so syllabus edits never apply; also `execFileSync`s during startup | `bootstrap.service.ts` | MB-2 |
+| ~~DSA seeders delete the catalogue and cascade away solved history~~ | — | **fixed — ADR-15, 2026-08-30** |
 | `DailyDSASet` is global — keyed on `date` alone, no `userId`. The one V1 table that breaks invariant 1 | `prisma/schema.prisma` | **unscheduled** — harmless while single-user, blocks V3 |
-| `prisma/seed.js` clears roadmap data before seeding, which cascades `UserProgress` away | `prisma/seed.js` | MB-2 — the re-seed idempotency test in `roadmap.service.test.ts` pins the failure mode |
+| `prisma/seed.js` clears roadmap data before seeding, which cascades `UserProgress` away. **Do not run it against a database with roadmap progress** | `prisma/seed.js` | MB-2 — the failure mode is pinned by a test in `roadmap.service.test.ts` |
+| AI curriculum revised for 2026 but not seeded; the app still shows the six V1 phases | `docs/curriculum/ai-engineering.md` | MB-3 / MB-4, after MB-1 and MB-2 |
 | No client tests | `client/` | out of V2 scope by decision (`CLAUDE.md` §Stack) |
 
 ## Repo history note

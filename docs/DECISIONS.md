@@ -43,6 +43,8 @@ below in full.
 |---|---|---|
 | ADR-13 | App, Prisma client and entrypoint are three modules | accepted |
 | ADR-14 | The response envelope is adopted per route family | accepted |
+| ADR-15 | DSA catalogue natural key; seeds stop deleting | accepted |
+| ADR-16 | Design tokens are the only source of colour; the client is theme-dual | accepted |
 
 ---
 
@@ -168,3 +170,206 @@ Existing accounts are unaffected — only registration validates — and login
 deliberately does *not* apply the rule, both because an older password must
 still work and because a length complaint on a login form is itself a
 disclosure.
+
+### ADR-15 — The DSA catalogue gets a natural key, and its seed stops deleting
+**Date:** 2026-08-30  **Status:** accepted
+
+**Context.** The repo shipped two DSA seeders and both were destructive.
+
+`prisma/seed-dsa.js` was an eighteen-question sample — its own comment said
+`// Sample subset of Striver's SDE Sheet to seed` — and it opened with
+`prisma.dSAQuestion.deleteMany()`. `seed-191.js` loaded the real 191-question
+sheet but opened with `deleteMany()` on `userDSAProgress`, `dailyDSASet` *and*
+`dSAQuestion`, then fabricated progress with
+`insertedQuestions.slice(0, 140).map(... solved: true ...)`.
+
+`BootstrapService.ensureSeedData()` called the **sample**, on every boot,
+whenever `DSAQuestion.count() === 0`. It never called the real one.
+
+Because `UserDSAProgress.questionId` is `onDelete: Cascade`, deleting the
+catalogue silently deletes the user's solved history. This is not hypothetical:
+the dev database was found holding 18 questions across 3 topics and **zero**
+progress rows, having previously held the full sheet. The owner believed roughly
+144 questions were marked solved.
+
+Two distinct faults, worth separating:
+
+1. **Data loss.** A seed that deletes what it is about to recreate destroys
+   everything that references it. `CLAUDE.md` invariant 7 already said "seed
+   scripts are idempotent" — it was stated and not enforced, which is the same
+   as not stated.
+2. **Fabrication.** The 140 solved flags were never a record of anything. They
+   were the first 140 rows in insertion order, written with
+   `solvedAt: new Date()` and displayed to the user as their own progress. A
+   tracker whose entire purpose is making real progress legible cannot invent
+   the number it reports.
+
+**Decision.** Three parts.
+
+- **Give `DSAQuestion` its natural key.** `@@unique([topic, title])`, migration
+  `20260830150000_dsa_question_natural_key`. This is what makes an upsert
+  possible; without it the seeders had no key and delete-and-recreate was the
+  path of least resistance.
+- **Replace both scripts with `src/services/dsaSeed.service.ts`.** It upserts on
+  `(topic, title)`, updates changed rows *in place* by id so identity survives,
+  and deletes nothing — including rows in the database but absent from the
+  sheet, which are far more likely to be a sheet revision than something worth
+  destroying a user's notes over. `prisma/seed-dsa.js` is deleted; `seed-191.js`
+  becomes a thin CLI wrapper.
+- **No seeder writes `UserDSAProgress`, ever.** Solved state is entered through
+  the app. A guard test fails if any seed file calls `create`/`createMany`/
+  `upsert`/`updateMany` on that table.
+
+`BootstrapService` now runs the DSA seed unguarded on every boot, because a seed
+that cannot destroy anything does not need a guard. That is the shape HLD_v2
+§1.2 finding 9 asks for — "keep the seed idempotent and safe to run on every
+boot; that is what makes the guard unnecessary rather than merely relaxed" —
+applied to the DSA half only.
+
+**This is MB-2 work done out of order, and that is a deliberate deviation.**
+`docs/LLD_v2.md` §7 puts it after all of Milestone A. Three reasons it could not
+wait: the bug is live and had already destroyed data; the owner reported it
+directly and asked for the state to be made durable; and every day it stays
+unfixed is another chance for an empty table at boot to replace the sheet again.
+MB-2's actual scope — the curriculum markdown parser and the *roadmap* seed — is
+untouched and still owed. `bootstrap.service.ts` carries a comment saying so.
+
+**Alternatives rejected.**
+
+- *Just re-run `seed-191.js` and move on.* Restores the questions and leaves
+  every landmine armed. It would also have written 140 false solved flags,
+  which is the fault this ADR exists to remove.
+- *Drop the cascade on `UserDSAProgress.questionId`.* Would orphan progress rows
+  pointing at deleted questions, trading data loss for data corruption. The
+  cascade is correct; deleting the catalogue is what is wrong.
+- *Do the whole of MB-2 now.* The curriculum parser is a genuinely separate
+  piece of work with its own format contract (LLD_v2 §6) and its own
+  idempotency test. Pulling all of it forward would be a much larger reordering
+  than the bug justifies.
+- *Wait for MB-2 as the plan says.* Correct process, wrong outcome. Leaving a
+  known data-destroying seed in place through all twelve steps of Milestone A,
+  on a repo whose owner has already lost history to it once, is not a defensible
+  reading of "the order is strict".
+
+**Consequences.** The milestone order now has a documented exception, and MB-2
+is smaller than the plan says — a future reader of `docs/LLD_v2.md` §7 will find
+part of MB-2 already done and must read this ADR to understand why.
+
+The roadmap seed is deliberately still broken. `prisma/seed.js` still opens with
+`Clearing existing roadmap data...` and still cascades `UserProgress` away, and
+`BootstrapService` still guards it on `count() === 0` and still shells out via
+`execFileSync`. Fixing it needs the curriculum parser that does not exist yet.
+Until MB-2 lands, **do not run `prisma/seed.js` against a database with roadmap
+progress in it** — the failure mode is pinned by a test in
+`tests/service/roadmap.service.test.ts`, so it is documented rather than merely
+known.
+
+The unique index is also a real constraint on the sheet: two questions sharing a
+topic and title can no longer both exist. The current 191 have no such
+collision, and if a future sheet revision does, that is a fact worth being
+forced to notice.
+
+And the honest cost to the owner: the 144 solved questions are not recoverable
+from anything in this repo. They were never stored here as fact. They have to be
+re-entered once, and after that they are safe.
+
+---
+
+### ADR-16 — Design tokens are the only source of colour, and the client is theme-dual
+
+**Date:** 2026-08-30  **Status:** accepted
+
+**Context.** `CLAUDE.md` §Stack said "Dark theme." and the client was built to
+match — but not through the theme layer. `layout.tsx` hardcoded
+`<html className="dark">`, `(dashboard)/layout.tsx` set
+`bg-neutral-900 text-white` directly over `--background`, and the shadcn token
+block defined a full light palette that nothing could ever reach.
+
+The measurable state: `dark:` appeared **7 times** across the whole client,
+against **547 hardcoded colour literals in 25 files**. The `ui/` primitives were
+themselves dark-only — `Card` hardcoded `bg-neutral-900/80` and `text-white/90`.
+Three separate visual languages had accumulated: a glass landing page, a
+dashboard hero block copy-pasted into seven files, and `/roadmap` and `/dsa`,
+which injected `<style dangerouslySetInnerHTML>` blocks containing a Google
+Fonts `@import` and `body { background-color:#0a0a0f !important }`.
+
+So "add a light mode" was not a switch that existed and was turned off. There
+was no system to switch. Neither `docs/HLD_v2.md` nor `docs/LLD_v2.md` says
+anything about theming, visual design or the design system — it is the one
+surface V2 planned structurally (LLD §5 names hooks, components and routes) and
+never planned visually.
+
+**Decision.** Three things, together, because none of them works alone.
+
+1. **Tokens are the only source of colour.** No raw literal may appear in
+   `client/src/` outside `globals.css`. `client/scripts/check-tokens.mjs`
+   fails the build if one does — the same guard shape as
+   `tests/unit/noInlineDayBoundaries.test.ts`, which is what keeps ADR-4 true
+   after M0 closed. Every value is fixed in `docs/design.md`, which is to
+   colour what `docs/cadence.md` is to numbers: if the code disagrees with the
+   document, the code is wrong.
+2. **The client is theme-dual**, defaulting to the OS, with a Light / Dark /
+   System toggle persisted under `ppt-theme`. This supersedes "Dark theme." in
+   `CLAUDE.md` §Stack, which has been amended to point here.
+3. **Chromatic tokens are declared twice**, once per theme. A hue that reaches
+   4.5:1 against white is unreadable on a near-black canvas, so `--primary`,
+   the six `--pillar-*` tokens and the status tokens all shift lightness
+   between themes. Only the neutrals mirror.
+
+The theme is resolved by an inline, synchronous script in `<head>` that sets
+`.dark` before first paint.
+
+**Alternatives rejected.**
+
+*Adopt `next-themes`.* It is the obvious choice and it was declined. What it
+provides is a `localStorage` read, a `matchMedia` listener and a blocking
+script — about fifteen lines, all of which this repo now owns and can read. The
+project's purpose is to be a codebase its owner learns from, and a dependency
+whose whole job is a mechanism worth understanding is a poor trade here. It
+would also have added a package for a problem that was never the hard part; the
+hard part was the 547 literals, which no library removes.
+
+*Keep dark-only and just make it prettier.* Cheaper, and it was the literal
+request's minimum. Rejected because the symptom ("looks basic and very dark")
+and the cause (no working token layer) are different problems, and repainting
+25 files with a nicer set of hardcoded greys would leave the next change exactly
+as expensive as this one.
+
+*Migrate the shell and dashboard now, the rest later.* Rejected because a
+half-themed app is worse than an unthemed one: the toggle would visibly break
+`/roadmap` and `/dsa`, which are the two pages that most needed it. The two
+injected `!important` body colours in particular are all-or-nothing — they
+defeat the theme globally, from any route, for as long as they exist.
+
+*Automate the literal migration with codemods.* The mapping is semantic, not
+mechanical: `text-neutral-500` is `--muted-foreground` in one place and
+`--border` in another. A codemod would have produced a uniform, wrong answer
+quickly.
+
+**Consequences.**
+
+The cost is a 547-literal migration touching 25 files, and every future page
+must now pass the token guard — a real constraint on anyone adding a page in a
+hurry, and the point.
+
+Three pages (`/fitness`, `/financial-goals`, `/daily-time`) were re-tokenized
+but not redesigned, because MA-8, MA-10 and MA-11 rebuild them on the metric
+engine. That work is deliberately shallow and will be thrown away.
+
+The dashboard shows **no target denominators**. `LearningTarget.*` is a
+free-text `String` and `CLAUDE.md` invariant 4 forbids substituting a hardcoded
+number, so hours render as absolute values. `StatCard` already accepts an
+optional `target`; MA-6 makes targets numeric and fills it in.
+
+`client/src/lib/cadence.ts` now holds the 5-of-7 week rule client-side. That is
+a duplication of `docs/cadence.md` §6 in a second place, accepted so the
+dashboard can show week completion before MA-12 ships the endpoint that should
+own it. The module is marked for deletion at MA-12.
+
+The token guard is a lint check, not a test suite. It does not reopen the "no
+client tests" decision in `CLAUDE.md` §Stack — there is still no client test
+runner, and the risk this catches is not behavioural.
+
+Finally, this milestone was inserted ahead of MA-1 at the owner's direction. It
+touches only `client/`, adds no table, column or migration, and leaves the
+server suite untouched — so it delays Milestone A without reordering it.

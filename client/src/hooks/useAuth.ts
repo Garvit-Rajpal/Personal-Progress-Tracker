@@ -2,11 +2,14 @@ import { useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
+type LoginPayload = { email: string; password: string };
+type RegisterPayload = LoginPayload & { name: string };
+
 export const useAuth = () => {
   const router = useRouter();
 
   const loginMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: LoginPayload) => {
       const res = await api.post('/auth/login', data);
       // M0-4 (ADR-14): /api/auth now answers with the `{ data }` envelope.
       // The rest of the API is still bare and converts domain by domain.
@@ -21,7 +24,7 @@ export const useAuth = () => {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: RegisterPayload) => {
       const res = await api.post('/auth/register', data);
       // M0-4 (ADR-14) — see the comment in loginMutation.
       return res.data.data;

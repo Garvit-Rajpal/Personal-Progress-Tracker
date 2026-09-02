@@ -1,19 +1,36 @@
 'use client';
 
 import { useState } from 'react';
+import { Lightbulb } from 'lucide-react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectField } from '@/components/ui/select';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { useProjectIdeas } from '@/hooks/useProjectIdeas';
+
+type Priority = 'Low' | 'Medium' | 'High';
 
 type ProjectIdea = {
   ideaName: string;
   description: string;
-  priority: 'Low' | 'Medium' | 'High';
+  priority: Priority;
   researchReferences: string;
   expectedTimeToBuild: string;
   startDate: string;
   dueDate: string;
+};
+
+const PRIORITY_TONE: Record<Priority, BadgeTone> = {
+  Low: 'neutral',
+  Medium: 'warning',
+  High: 'danger'
 };
 
 export default function ProjectIdeasPage() {
@@ -21,40 +38,26 @@ export default function ProjectIdeasPage() {
 
   const [ideaName, setIdeaName] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
+  const [priority, setPriority] = useState<Priority>('Medium');
   const [researchReferences, setResearchReferences] = useState('');
   const [expectedTimeToBuild, setExpectedTimeToBuild] = useState('');
   const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
 
   const addIdea = () => {
-    const trimmedIdeaName = ideaName.trim();
-    const trimmedDescription = description.trim();
-    const trimmedPriority = priority;
-    const trimmedResearchReferences = researchReferences.trim();
-    const trimmedExpectedTimeToBuild = expectedTimeToBuild.trim();
-
-    if (
-      !trimmedIdeaName ||
-      !trimmedDescription ||
-      !trimmedPriority ||
-      !trimmedResearchReferences ||
-      !trimmedExpectedTimeToBuild ||
-      !startDate ||
-      !dueDate
-    ) {
-      return;
-    }
-
-    addProjectIdea({
-      ideaName: trimmedIdeaName,
-      description: trimmedDescription,
-      priority: trimmedPriority,
-      researchReferences: trimmedResearchReferences,
-      expectedTimeToBuild: trimmedExpectedTimeToBuild,
+    const payload = {
+      ideaName: ideaName.trim(),
+      description: description.trim(),
+      priority,
+      researchReferences: researchReferences.trim(),
+      expectedTimeToBuild: expectedTimeToBuild.trim(),
       startDate,
-      dueDate,
-    });
+      dueDate
+    };
+
+    if (Object.values(payload).some((value) => !value)) return;
+
+    addProjectIdea(payload);
 
     setIdeaName('');
     setDescription('');
@@ -66,131 +69,174 @@ export default function ProjectIdeasPage() {
   };
 
   return (
-    <div className="relative space-y-6 max-w-7xl mx-auto overflow-hidden">
-      <div className="pointer-events-none absolute -right-10 top-0 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
-      <div className="pointer-events-none absolute left-14 top-24 h-64 w-64 rounded-full bg-emerald-400/5 blur-3xl" />
-      <div className="relative rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.95),rgba(17,24,39,0.8))] p-6 shadow-[0_30px_90px_-50px_rgba(0,0,0,0.9)] backdrop-blur-xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-200">
-          <span className="h-2 w-2 rounded-full bg-cyan-300" />
-          Idea backlog
-        </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">Project Ideas</h1>
-        <p className="mt-2 max-w-2xl text-neutral-300">Capture and prioritize ideas with timeline and references.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Project ideas"
+        description="Capture and prioritise ideas with a timeline and references."
+      />
 
-      <Card className="border-white/10 bg-white/[0.04]">
+      <Card>
         <CardHeader>
-          <CardTitle>Add Project Idea</CardTitle>
+          <CardTitle className="text-sm">Add an idea</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <Input
-              placeholder="Idea Name"
-              value={ideaName}
-              onChange={(e) => setIdeaName(e.target.value)}
-              className="bg-neutral-900/90 border-white/10"
-            />
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as 'Low' | 'Medium' | 'High')}
-              className="h-8 w-full rounded-lg border border-white/10 bg-neutral-900/90 px-2.5 text-sm text-white outline-none focus-visible:border-cyan-400/60 focus-visible:ring-3 focus-visible:ring-cyan-400/15"
-            >
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-            </select>
-            <Input
-              placeholder="Expected Time (e.g. 15 hours)"
-              value={expectedTimeToBuild}
-              onChange={(e) => setExpectedTimeToBuild(e.target.value)}
-              className="bg-neutral-900/90 border-white/10"
-            />
-            <Input
-              placeholder="Research References"
-              value={researchReferences}
-              onChange={(e) => setResearchReferences(e.target.value)}
-              className="bg-neutral-900/90 border-white/10 md:col-span-2 lg:col-span-3"
-            />
-            <textarea
-              placeholder="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-24 w-full rounded-lg border border-white/10 bg-neutral-900/90 px-2.5 py-2 text-sm text-white placeholder:text-neutral-500 outline-none focus-visible:border-cyan-400/60 focus-visible:ring-3 focus-visible:ring-cyan-400/15 md:col-span-2 lg:col-span-3"
-            />
-            <div>
-              <label className="text-xs text-neutral-400 mb-1 block">Start Date</label>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="idea-name" className="text-xs text-muted-foreground">
+                Idea name
+              </Label>
               <Input
+                id="idea-name"
+                value={ideaName}
+                onChange={(e) => setIdeaName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="idea-priority" className="text-xs text-muted-foreground">
+                Priority
+              </Label>
+              <SelectField>
+                <Select
+                  id="idea-priority"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </Select>
+              </SelectField>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="idea-time" className="text-xs text-muted-foreground">
+                Expected time to build
+              </Label>
+              <Input
+                id="idea-time"
+                placeholder="e.g. 15 hours"
+                value={expectedTimeToBuild}
+                onChange={(e) => setExpectedTimeToBuild(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="idea-start" className="text-xs text-muted-foreground">
+                Start date
+              </Label>
+              <Input
+                id="idea-start"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-neutral-900/90 border-white/10"
               />
             </div>
-            <div>
-              <label className="text-xs text-neutral-400 mb-1 block">Due Date</label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="idea-due" className="text-xs text-muted-foreground">
+                Due date
+              </Label>
               <Input
+                id="idea-due"
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="bg-neutral-900/90 border-white/10"
               />
             </div>
-            <div className="flex items-end">
-              <Button onClick={addIdea} className="w-full" disabled={isAdding}>
-                {isAdding ? 'Adding...' : 'Add Idea'}
-              </Button>
+
+            <div className="space-y-1.5 lg:col-span-1">
+              <Label htmlFor="idea-refs" className="text-xs text-muted-foreground">
+                Research references
+              </Label>
+              <Input
+                id="idea-refs"
+                value={researchReferences}
+                onChange={(e) => setResearchReferences(e.target.value)}
+              />
             </div>
+
+            <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
+              <Label htmlFor="idea-description" className="text-xs text-muted-foreground">
+                Description
+              </Label>
+              <Textarea
+                id="idea-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={addIdea} disabled={isAdding}>
+              {isAdding ? 'Adding…' : 'Add idea'}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="border-white/10 bg-white/[0.04]">
+      <Card>
         <CardHeader>
-          <CardTitle>Ideas Table</CardTitle>
+          <CardTitle className="text-sm">Ideas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm min-w-275">
-              <thead>
-                <tr className="border-b border-neutral-800 text-left text-neutral-400">
-                  <th className="py-3 pr-4 font-medium">Idea Name</th>
-                  <th className="py-3 pr-4 font-medium">Description</th>
-                  <th className="py-3 pr-4 font-medium">Priority</th>
-                  <th className="py-3 pr-4 font-medium">Research References</th>
-                  <th className="py-3 pr-4 font-medium">Expected Time to Build</th>
-                  <th className="py-3 pr-4 font-medium">Start Date</th>
-                  <th className="py-3 pr-4 font-medium">Due Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-6 text-center text-neutral-500">
-                      Loading ideas...
-                    </td>
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : projectIdeas.length === 0 ? (
+            <EmptyState
+              icon={Lightbulb}
+              title="No ideas yet"
+              description="Capture the first one above so it stops living in your head."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[60rem] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                    <th className="py-2 pr-4 font-medium">Idea</th>
+                    <th className="py-2 pr-4 font-medium">Description</th>
+                    <th className="py-2 pr-4 font-medium">Priority</th>
+                    <th className="py-2 pr-4 font-medium">References</th>
+                    <th className="py-2 pr-4 font-medium">Est. time</th>
+                    <th className="py-2 pr-4 font-medium">Start</th>
+                    <th className="py-2 pr-4 font-medium">Due</th>
                   </tr>
-                ) : projectIdeas.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-6 text-center text-neutral-500">
-                      No ideas added yet.
-                    </td>
-                  </tr>
-                ) : (
-                  projectIdeas.map((idea: ProjectIdea, index: number) => (
-                    <tr key={`${idea.ideaName}-${index}`} className="border-b border-white/5 align-top transition-colors hover:bg-white/[0.03]">
-                      <td className="py-3 pr-4 font-medium text-neutral-100">{idea.ideaName}</td>
-                      <td className="py-3 pr-4 text-neutral-300 max-w-xs whitespace-pre-wrap">{idea.description}</td>
-                      <td className="py-3 pr-4 text-neutral-100">{idea.priority}</td>
-                      <td className="py-3 pr-4 text-neutral-300">{idea.researchReferences}</td>
-                      <td className="py-3 pr-4 text-neutral-100">{idea.expectedTimeToBuild}</td>
-                      <td className="py-3 pr-4 text-neutral-100">{new Date(idea.startDate).toISOString().slice(0, 10)}</td>
-                      <td className="py-3 pr-4 text-neutral-100">{new Date(idea.dueDate).toISOString().slice(0, 10)}</td>
+                </thead>
+                <tbody>
+                  {projectIdeas.map((idea: ProjectIdea, index: number) => (
+                    <tr
+                      key={`${idea.ideaName}-${index}`}
+                      className="border-b border-border align-top transition-colors last:border-0 hover:bg-muted/50"
+                    >
+                      <td className="py-2 pr-4 font-medium text-foreground">{idea.ideaName}</td>
+                      <td className="max-w-xs whitespace-pre-wrap py-2 pr-4 text-muted-foreground">
+                        {idea.description}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <Badge tone={PRIORITY_TONE[idea.priority] ?? 'neutral'}>
+                          {idea.priority}
+                        </Badge>
+                      </td>
+                      <td className="max-w-xs truncate py-2 pr-4 text-muted-foreground">
+                        {idea.researchReferences}
+                      </td>
+                      <td className="py-2 pr-4 text-foreground">{idea.expectedTimeToBuild}</td>
+                      <td className="metric py-2 pr-4 text-muted-foreground">
+                        {new Date(idea.startDate).toISOString().slice(0, 10)}
+                      </td>
+                      <td className="metric py-2 pr-4 text-muted-foreground">
+                        {new Date(idea.dueDate).toISOString().slice(0, 10)}
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

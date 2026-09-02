@@ -20,16 +20,23 @@ decision is wrong, say so and stop; do not silently substitute your own.
 5. `docs/curriculum/system-design.md` and `docs/curriculum/ai-engineering.md` —
    the source of truth for learning-track content. Seed scripts derive from
    these files.
-6. `docs/DECISIONS.md` — ADR index.
+6. `docs/design.md` — the client's visual contract (ADR-16). Source of truth
+   for colour, type, spacing and motion, the way `docs/cadence.md` is for
+   numbers. Read it before touching anything under `client/`.
+7. `docs/DECISIONS.md` — ADR index.
 
-**Current phase:** Milestone 0 (foundation), `docs/LLD_v2.md` §7.
+**Current phase:** Milestone 0 is complete, and so is the out-of-band Milestone
+D0 (design foundation, ADR-16). **Next is MA-1**, `docs/LLD_v2.md` §7.
 Order is strict: **M0 → Milestone A → Milestone B.** A milestone must be fully
-green before the next one starts.
+green before the next one starts. D0 sits outside that sequence — it touched
+only `client/` — and does not reorder it.
 
 ## Stack
 
 - **Client:** Next.js 16 (App Router), React 19, TypeScript strict, Tailwind v4,
-  shadcn / base-ui, TanStack Query, Recharts, axios, lucide-react. Dark theme.
+  shadcn / base-ui, TanStack Query, Recharts, axios, lucide-react.
+  **Light and dark, defaulting to the OS** (ADR-16 — this supersedes V1's
+  "Dark theme."). Colour comes only from tokens; see invariant 10.
 - **Server:** Express 5, TypeScript strict, Prisma 6, PostgreSQL 15, JWT access
   token + httpOnly refresh cookie, zod, helmet.
 - **Infra:** Docker Compose — `ppt_postgres` (host 5433), `ppt_server`
@@ -101,7 +108,14 @@ Violating any of these is a bug, not a style preference.
 8. **Curriculum lives in `docs/curriculum/*.md`.** The database is a projection
    of those files. To change the syllabus, edit the markdown and re-seed — never
    hand-edit seeded rows as the mechanism of change.
-9. **The tracker never duplicates another project's internal docs.** LoveTeddy
+9. **No raw colour literal in `client/src/` outside `globals.css`** (ADR-16).
+   Not a Tailwind palette class (`bg-neutral-900`, `text-cyan-200`), not a hex,
+   not an `rgba()`, and never an injected `<style>` block. Use a semantic or
+   pillar token; every value is listed in `docs/design.md`.
+   `npm run check:tokens` fails the build otherwise. A component that needs a
+   colour the tokens do not have needs a new token, not an exception.
+
+10. **The tracker never duplicates another project's internal docs.** LoveTeddy
    and TrustDesk own their own `docs/`. This repo tracks them at the outcome
    level (milestones, hours, status) and links out (ADR-6).
 
@@ -126,11 +140,17 @@ Violating any of these is a bug, not a style preference.
 - `docker-compose up --build` — full stack
 - `docker exec -it ppt_server npx prisma migrate dev --name <name>` — new migration
 - `docker exec -it ppt_server node prisma/seed.js` — roadmap syllabus
-- `docker exec -it ppt_server node seed-191.js` — Striver 191 DSA questions
-- Note: `BootstrapService.ensureSeedData()` already runs `prisma/seed.js` and
-  `prisma/seed-dsa.js` automatically on server start, but **only when the tables
-  are empty** — see HLD_v2 §1.2 finding 9. Until MB-2 lands, a syllabus change
-  needs the manual seed command above.
+- `docker exec -it ppt_server node seed-191.js` — Striver 191 DSA questions.
+  Idempotent and non-destructive since ADR-15: it upserts on `(topic, title)`,
+  deletes nothing, and never writes solved flags.
+- Note: `BootstrapService.ensureSeedData()` runs the **DSA** seed on every boot
+  (safe — ADR-15), and `prisma/seed.js` **only when `RoadmapPhase` is empty**
+  (HLD_v2 §1.2 finding 9, still owed to MB-2).
+- **Do not run `prisma/seed.js` against a database with roadmap progress.** It
+  opens with `Clearing existing roadmap data...` and `UserProgress` cascades
+  away with the items. This is MB-2's remaining job.
+- `npm run check:tokens` (client) — ADR-16 colour-literal guard
+- `npm run lint` / `npm run build` (client) — green as of Milestone D0
 - `npm test` (server) — full suite; must be green before any commit
 - `npm run test:unit` / `npm run test:integration`
 

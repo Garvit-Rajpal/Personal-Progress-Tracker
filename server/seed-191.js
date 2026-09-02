@@ -1,69 +1,41 @@
-const { PrismaClient } = require('@prisma/client');
-const fs = require('fs');
+#!/usr/bin/env node
+/**
+ * Seed the Striver SDE sheet into the catalogue.
+ *
+ * ADR-15. This used to be a destructive script: it opened with
+ *
+ *     await prisma.userDSAProgress.deleteMany({});
+ *     await prisma.dailyDSASet.deleteMany({});
+ *     await prisma.dSAQuestion.deleteMany({});
+ *
+ * and then fabricated solved history with `insertedQuestions.slice(0, 140)`.
+ * Both halves were wrong. The deletes destroyed the user's real progress every
+ * time the script ran, and the 140 "solved" rows were not a record of anything
+ * - just the first 140 questions in insertion order, presented to the user as
+ * their own achievement.
+ *
+ * It is now a thin CLI wrapper around `seedDsaQuestions`, which upserts on
+ * (topic, title), deletes nothing, and never writes UserDSAProgress. Solved
+ * state is entered through the app and belongs to the user.
+ *
+ *     docker exec -it ppt_server node seed-191.js
+ */
+require('ts-node').register({ transpileOnly: true, compilerOptions: { module: 'commonjs' } });
+
 const path = require('path');
+const { seedDsaQuestions } = require(path.join(__dirname, 'src', 'services', 'dsaSeed.service.ts'));
+const { prisma } = require(path.join(__dirname, 'src', 'lib', 'prisma.ts'));
 
-const prisma = new PrismaClient();
-
-async function main() {
-  console.log('Seeding 191 Striver SDE Sheet Questions...');
-
-  const rawData = fs.readFileSync(path.join(__dirname, '191_striver_questions.json'), 'utf-8');
-  const dsaQuestions = JSON.parse(rawData);
-
-  // 1. Delete all existing DSA progress and questions
-  await prisma.userDSAProgress.deleteMany({});
-  await prisma.dailyDSASet.deleteMany({});
-  await prisma.dSAQuestion.deleteMany({});
-
-  console.log('Cleared existing DSA questions.');
-
-  // 2. Prepare the data for bulk insertion
-  const formattedQuestions = dsaQuestions.map(q => ({
-    title: q.title,
-    topic: q.topic,
-    difficulty: q.difficulty.toUpperCase(), // Map "Medium" -> "MEDIUM"
-    link: q.link || "https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/" // Fallback for null links
-  }));
-
-  // 3. Insert questions
-  await prisma.dSAQuestion.createMany({
-    data: formattedQuestions,
-    skipDuplicates: true,
-  });
-
-  const insertedQuestions = await prisma.dSAQuestion.findMany({});
-  console.log(`Inserted ${insertedQuestions.length} DSA questions.`);
-
-  // 4. Mark 140 of them as solved for the default user
-  const user = await prisma.user.findFirst();
-  if (!user) {
-    console.log('No user found to assign progress to. Skipping progress creation.');
-    return;
-  }
-
-  // Shuffle or slice 140
-  const questionsToSolve = insertedQuestions.slice(0, 140);
-  
-  const progressData = questionsToSolve.map(q => ({
-    userId: user.id,
-    questionId: q.id,
-    solved: true,
-    solvedAt: new Date()
-  }));
-
-  await prisma.userDSAProgress.createMany({
-    data: progressData,
-    skipDuplicates: true
-  });
-
-  console.log(`Marked 140 questions as solved for user ${user.email}`);
-}
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
+seedDsaQuestions()
+  .then((result) => {
+    console.log(
+      `DSA catalogue: ${result.created} added, ${result.updated} updated, ` +
+        `${result.unchanged} unchanged (${result.total} total).`
+    );
+    console.log('No solved flags were written - mark those in the app.');
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

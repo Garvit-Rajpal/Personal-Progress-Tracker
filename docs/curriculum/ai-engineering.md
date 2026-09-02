@@ -1,7 +1,9 @@
-# Curriculum — AI Engineering (RAG and Agents, Production Depth)
+# Curriculum — AI Engineering (Context, Retrieval, Agents, Production Depth)
 
 Source of truth for the advanced AI track (ADR-12). Parsed by
 `server/prisma/seedCurriculum.js`.
+
+_Revised 2026-08-30 against the current job market. See_ _"What the 2026 revision changed" below for what moved and why._
 
 ---
 
@@ -28,33 +30,93 @@ output. A `MockModelAdapter` means no test ever calls a live model.
 That is a stronger starting point than most people have. It means the honest
 gaps are narrower and more specific:
 
+- **Context engineering.** The named discipline of 2026 and the one with no
+  coverage at all in either repo. Deciding what enters the context window,
+  what stays, what gets compacted and what gets dropped. Most agent failures
+  are context failures, not model failures, and this is now what interview
+  loops actually probe.
 - **Retrieval quality.** pgvector similarity alone is the weakest usable
   retrieval. Hybrid search, reranking and query understanding are where the
   large gains live, and none of them are in the codebase yet.
 - **Measurement.** The eval harness scores end-to-end outcomes. It does not
   isolate *retrieval* quality, so a retrieval regression is currently invisible
-  until it changes an answer.
+  until it changes an answer. "Eval literacy" is the phrase the market uses
+  for this and it is priced accordingly.
 - **Agent control.** TrustDesk's pipeline is deterministic code orchestrating
   model calls — a deliberately conservative design and the right one there. A
   genuinely agentic system with planning, tool loops and recovery is a different
   problem and has not been built.
+- **Tool infrastructure.** MCP went from one interesting protocol to the
+  default way tools and retrieval sources are wired to clients. Being an MCP
+  *user* is now assumed; being able to build and secure a server is not.
+
+## What the 2026 market is actually hiring for
+
+Four shifts worth planning against, rather than a list of trendy words:
+
+1. **The title "prompt engineer" is gone.** Postings now read AI engineer,
+   applied AI engineer, agent engineer, and increasingly context engineer.
+   Prompt craft is assumed and is not the skill being bought.
+2. **Production over research.** Hiring shifted decisively toward people who
+   can deploy, measure and operate AI systems rather than train models. The
+   PhD filter has largely been replaced by a portfolio filter — which favours
+   someone with two shipped repos and real numbers.
+3. **Eval literacy is the priced skill.** Golden datasets, LLM-as-judge with a
+   calibrated rubric, and regression gates in CI. It is what separates a demo
+   from a product, and it is what a good interviewer digs into.
+4. **Context engineering replaced prompt engineering as the hard part.**
+   Retrieval design, state management, tool catalog design, context budgeting,
+   and measuring whether a context change actually helped.
+
+Note what this does *not* say: nothing here rewards knowing more model names.
+Every one of those four is measurable engineering, which is the good news —
+it is the kind of thing this track can actually produce evidence for.
 
 **Pace.** ~2.5 h/week plus a weekend block (`docs/cadence.md`) — roughly one
-item per week. This track is **37 items**, so about **eight and a half months**
-at baseline pace. The three capstones run in parallel with the weekly items,
-not after them, and each is a multi-week piece of work in its own right.
+item per week. This track is **50 items** — 46 weekly items plus 4 capstones
+that run in parallel — so about **ten and a half months** at baseline pace. It
+was 37 items and roughly eight months before the 2026 revision. Adding context
+engineering and MCP made it longer, and rounding that away would be exactly the
+dishonesty `docs/cadence.md` exists to prevent.
 
-**If time is short, the two phases that carry the most weight are *RAG —
-Retrieval Quality* and *Agents — Design and Control*.** Evaluation and
-production items matter enormously in the job, but retrieval quality and agent
-control are what you can actually demonstrate in an interview and what most
-directly improve TrustDesk and LoveTeddy.
+**The interview-critical subset, if time is short — and it will be.** Take three
+whole phases and five named items:
+
+| Take | Items |
+|---|---|
+| *Context Engineering* | 6 |
+| *RAG — Retrieval Quality* | 8 |
+| *Agents — Design and Control* | 9 |
+| Faithfulness and groundedness scoring; A regression harness that runs in CI | 2 |
+| Trajectory evaluation; LLM-as-judge with a real rubric; Adversarial and prompt-injection testing | 3 |
+| **Subset total** | **28** |
+
+That is about **six and a half months** at baseline pace, and it covers what
+2026 loops actually test — the five named items are precisely what "eval
+literacy" means in a job description. The remaining 22 items are depth you can
+add while employed. Per `docs/cadence.md`, if something must give in a given
+month, cut from this track before cutting DSA — but cut from the remaining 22,
+never from the subset.
 
 **The artifact rule.** Same as the design track. Every item produces running
 code, a measured result, or a written finding. An item marked complete with
 nothing to show for it is a lie to your own dashboard.
 
 ---
+
+### Phase: Context Engineering
+Type: AI
+Duration: 6 weeks
+Resources: Anthropic effective context engineering writeup, Anthropic Building effective agents, long-context degradation literature, your own TrustDesk traces
+
+| Item | Badge | Description |
+|---|---|---|
+| Context budgeting as an explicit design step | AI | Decide what the token budget is spent on before writing the prompt: system rules, tools, retrieved documents, history, scratchpad. Write the budget down. Most teams discover theirs by accident after it breaks. |
+| Compaction and summarisation strategies | AI | When to summarise history, what to keep verbatim, and what a lossy compaction costs you three turns later. Measure task success before and after rather than trusting that shorter is safe. |
+| Progressive disclosure of tools | AI | A model given forty tools chooses worse than one given six. Load tool definitions by phase or by relevance and measure the selection accuracy change. Directly informs the MCP server work later. |
+| Long-context degradation, measured | THEORY | Accuracy does not stay flat as the window fills, and the fall-off is not where intuition puts it. Run a needle-style probe on your own corpus and find where your own quality actually drops. |
+| Conversation state: persist, drop, replay | AI | Which turns are durable state and which are transcript noise. Where this overlaps agent checkpointing and where it does not. |
+| Context failure taxonomy | THEORY | Categorise failures as missing context, poisoned context, distracting context, or context the model saw and ignored. Each has a different fix, and conflating them is how teams tune prompts for weeks against a retrieval bug. |
 
 ### Phase: RAG — Retrieval Quality
 Type: AI
@@ -128,7 +190,21 @@ Resources: Chip Huyen AI Engineering, provider pricing and rate-limit docs, Mode
 | Prompt versioning and rollout | AI | Prompts are deployed artifacts. Version them, diff them, roll them back, and know which version produced any given trace. |
 | Offline evaluation to online metrics | AI | Connecting benchmark scores to what users actually do. Where offline eval reliably misleads. |
 | Structured output at scale | AI | Schema enforcement, retry on parse failure, and partial-parse strategies for streaming. Extends the zod work already in both repos. |
-| Model Context Protocol | AI | Standardised tool and resource exposure. Directly relevant to how you already work, since Claude Code and Cowork are MCP clients. |
+| OpenTelemetry GenAI semantic conventions | AI | The CNCF-backed standard schema for LLM telemetry: spans for inference calls, tool invocations and agent steps, with token, cost and latency attributes. Vendor-neutral, so instrumenting once outlives your choice of dashboard. Still marked experimental — know which parts are stable before betting on them. |
+| Streaming, cancellation and partial failure | AI | What happens when a user navigates away mid-stream, a tool call fails after 200 tokens have been shown, or a guardrail rejects an answer already half-rendered. The failure modes that only exist because the answer arrives incrementally. |
+
+### Phase: Model Context Protocol and Tool Infrastructure
+Type: AI
+Duration: 4 weeks
+Resources: Model Context Protocol specification, MCP TypeScript SDK, OWASP LLM Top 10
+
+| Item | Badge | Description |
+|---|---|---|
+| MCP as a protocol, not a library | THEORY | JSON-RPC 2.0, the client/server split, and why a standard transport for tools matters more than any individual tool. Being able to explain the protocol is what separates a user from an engineer here. |
+| Tools, resources and prompts as distinct primitives | AI | Three different things that all look like "give the model something". Which to reach for, and what choosing wrong costs in context budget. |
+| Build an MCP server over TrustDesk | PROJECT | Expose its knowledge base as resources and its guarded actions as tools. The strongest kind of portfolio item: a real protocol over a real system you already own. |
+| Transports, auth and deployment | AI | stdio versus HTTP, session handling, and authenticating a server that is no longer running on the user's own machine. Where most MCP tutorials stop and production starts. |
+| MCP server security | THEORY | A tool description is untrusted input to a model. Injection through tool metadata, over-broad scopes, confused-deputy access, and why the permission boundary belongs outside the model. Extends the agent permissions work. |
 
 ### Phase: AI Engineering Capstones
 Type: AI
@@ -140,3 +216,45 @@ Resources: your own repos
 | Upgrade TrustDesk retrieval, measured end to end | PROJECT | Hybrid retrieval plus reranking behind the existing eval harness. Report the before and after numbers in the repo. The strongest possible interview artifact because the baseline is yours. |
 | Build one genuinely agentic system | PROJECT | Planning, tool loop, checkpointing, approval gate, trajectory evals. Something you will actually use, not a demo. |
 | Write up one retrieval finding publicly | JOB | A short post with real numbers from your golden set. Measured results from a system you own are rarer and more credible than tutorials. |
+| Publish a working MCP server | PROJECT | The TrustDesk server, documented and installable. In 2026 this is the single most legible proof that you build AI infrastructure rather than consume it. |
+
+---
+
+## What the 2026 revision changed
+
+Recorded so the diff is readable and the reasoning survives (ADR-12 makes this
+file the source of truth, so its history matters).
+
+**Added — `Context Engineering`, 6 items.** The largest genuine gap. The
+discipline barely had a name when this file was first written and is now what
+interview loops test. Nothing in either repo covers context budgeting,
+compaction, or long-context degradation.
+
+**Added — `Model Context Protocol and Tool Infrastructure`, 5 items.** MCP was
+one line in *LLM Systems in Production*, which under-rates it by 2026. That item
+is removed and replaced by a phase that goes as far as building and securing a
+server, because using MCP clients daily is now table stakes and building one is
+not.
+
+**Added — 2 items to `LLM Systems in Production`.** OpenTelemetry GenAI
+semantic conventions, because LLM observability standardised and instrumenting
+against a vendor-neutral schema is now the sane default. And streaming failure
+modes, which the file had only as a parenthetical inside structured output.
+
+**Added — 1 capstone.** Publish the MCP server.
+
+**Rewritten — the framing.** A section on what the market is buying, and an
+explicit interview-critical subset (~26 items, ~6 months) so the track stays
+usable when a month goes badly.
+
+**Not changed, deliberately.** The retrieval, evaluation and agent-control
+phases were already aimed at the right things and mostly got *more* relevant,
+not less. Renaming solid items to sound current would be churn, and the
+golden-set-first discipline in *RAG — Retrieval Quality* is exactly what "eval
+literacy" means in a job description.
+
+**Honest cost.** 37 items to 50; roughly eight months to ten and a half at
+baseline pace. `docs/cadence.md` §3 already said the full curriculum does not
+fit a 6-12 month window and told you to cut scope deliberately rather than
+discover the gap in month seven. That advice now matters more, which is why the
+subset above is explicit rather than implied.

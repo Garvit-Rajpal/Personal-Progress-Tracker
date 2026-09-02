@@ -1,11 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 
-export function NoteEditor({ question, initialNotes, onSave, isSaving }: { question: any, initialNotes: string, onSave: (val: string) => void, isSaving: boolean }) {
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+
+export function NoteEditor({
+  question,
+  initialNotes,
+  onSave,
+  isSaving
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  question: any;
+  initialNotes: string;
+  onSave: (val: string) => void;
+  isSaving: boolean;
+}) {
   const [notes, setNotes] = useState(initialNotes);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    // Re-seed the draft when the selected question changes. The editor is an
+    // uncontrolled draft over server state, so this is a resync, not a
+    // render-time derivation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNotes(initialNotes);
     setIsDirty(false);
   }, [question.id, initialNotes]);
@@ -16,33 +33,26 @@ export function NoteEditor({ question, initialNotes, onSave, isSaving }: { quest
   };
 
   return (
-    <div className="flex flex-col h-full space-y-4">
-      <div className="border-b border-neutral-800 pb-4 flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold">{question.title}</h2>
-          <p className="text-neutral-500 text-sm mt-1">Study Notes & Complexities</p>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-foreground">{question.title}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Notes and complexities</p>
         </div>
-        <Button 
-          onClick={handleSave} 
-          disabled={!isDirty || isSaving}
-          variant={isDirty ? "default" : "secondary"}
-          size="sm"
-        >
-          {isSaving ? "Saving..." : "Save Notes"}
+        <Button onClick={handleSave} disabled={!isDirty || isSaving} size="sm">
+          {isSaving ? 'Saving…' : 'Save'}
         </Button>
       </div>
-      
-      <div className="flex-1">
-        <textarea
-          className="w-full h-full min-h-[300px] bg-transparent resize-none text-neutral-300 placeholder:text-neutral-700 outline-none p-2 font-mono text-sm leading-relaxed"
-          placeholder="Write down your intuition, O(N) time/space complexities, or useful patterns..."
-          value={notes}
-          onChange={(e) => {
-            setNotes(e.target.value);
-            setIsDirty(true);
-          }}
-        />
-      </div>
+
+      <Textarea
+        className="min-h-[280px] resize-y font-mono text-xs leading-6"
+        placeholder="Intuition, time and space complexity, patterns worth remembering…"
+        value={notes}
+        onChange={(e) => {
+          setNotes(e.target.value);
+          setIsDirty(true);
+        }}
+      />
     </div>
   );
 }
