@@ -5,9 +5,10 @@ Only **active or incomplete** work lives here; completed detail moves into the
 feature doc under `docs/features/`. Updated at the end of every milestone
 (`CLAUDE.md` §Documentation, rule 1).
 
-_Last updated: 2026-08-30 — Milestone 0 complete; DSA seed data-loss bug fixed
+_Last updated: 2026-09-03 — Milestone 0 complete; DSA seed data-loss bug fixed
 (ADR-15); 144/191 solved history recovered; the AI curriculum revised for 2026;
-Milestone D0 (design foundation, ADR-16) complete. 292 tests green._
+Milestone D0 (design foundation, ADR-16) complete; the roadmap resource layer
+authored (ADR-17). 292 tests green._
 
 ---
 
@@ -82,11 +83,70 @@ migration, no server file, so the suite is untouched at 292. Full detail is in
 
 `npm run lint` is green for the first time; it was already failing before D0.
 
+**Roadmap resource layer shipped — 2026-09-03 (ADR-17).** Client-only, on the
+D0 precedent: no table, no column, no migration, no server file. The server
+suite is unchanged at **292**; `lint`, `build`, `check:tokens` and the new
+`check:resources` are all green.
+
+**It renders on `/roadmap`.** Each item now carries a collapsible *Revise* panel
+with short inline notes and clickable links — **161 revision bullets and 77
+links across all 33 items, 30 of them videos with verified runtimes.** An
+earlier pass delivered this as markdown only; that was wrong, and the reason is
+recorded in ADR-17's rejected alternatives: a link you cannot click at the
+moment of use is data about a link, not a link.
+
+Pipeline: `docs/curriculum/notes/roadmap-resources.md` (source of truth,
+invariant 8) → `client/scripts/build-roadmap-resources.mjs` →
+`client/src/lib/roadmapResources.generated.ts` → `ItemResources.tsx`. Same trade
+as `client/src/lib/cadence.ts`, and marked for deletion at MB-4 the same way.
+
+`docs/curriculum/notes/` holds four files:
+
+- `roadmap-resources.md` — the parsed source. One block per live item, keyed
+  `Phase :: Item` to match the `(phaseId, title)` pair the MB-2 seed upserts on.
+  Every URL was opened and **every video duration read from the video itself**.
+  That checking found: three stale references (LangGraph's docs host moved, the
+  OWASP LLM Top 10 moved to the GenAI Security Project with a 2026 edition, the
+  AI SDK reached v7 with a changed `useChat` shape), **one dead link**, one video
+  described as a 45-minute talk that is actually a **1m21s clip**, and a
+  3Blue1Brown video that had been retitled.
+- `advanced-typescript.md` — the long-form revision note, linked from the
+  TypeScript item's panel. Ends by pointing at the 24 `no-explicit-any` escapes
+  across 7 client files, whose root cause is that no `useQuery` in the client
+  passes a type argument.
+- `roadmap-optimisation.md` — **proposals for MB-2/MB-4, not applied.** See below.
+- `README.md` — why this is a subdirectory (`curriculumFormat.test.ts` asserts
+  the exact `.md` file list of `docs/curriculum/`, and `readdirSync` is not
+  recursive) and the rules the layer follows.
+
+**Two findings from that pass that MB-2 and MB-4 need to act on.**
+
+1. **Item-level duplication is unguarded.** MB-4's acceptance criterion is "no
+   duplicate items created against the V1 seed", and `curriculumFormat.test.ts`
+   enforces it only at *phase-title* level. Because the seed upserts on
+   `(phaseId, title)`, items in differently-named phases cannot collide — they
+   will simply both exist. **At least 13 of the 24 AI-flavoured V1 seed items
+   have a curriculum counterpart** (*Memory systems* / *Memory architectures*
+   being the clearest). Left alone, `/roadmap` will show both.
+2. **`docs/cadence.md` §3 is stale.** It still says the AI track is 37 items;
+   `ai-engineering.md` has been 50 since the 2026 revision. Its §3 table also
+   omits the 33 live roadmap items entirely, so the real post-Milestone-B total
+   is **134 items across 21 phases — about two and a half years** at baseline
+   pace, behind a single progress bar. cadence.md is the file that exists to
+   keep this arithmetic honest, so it is the one that has to be fixed.
+
+Both are written up with proposed fixes, costs and rejected alternatives in
+`docs/curriculum/notes/roadmap-optimisation.md`. Nothing there is urgent enough
+to reorder a milestone.
+
 ---
 
 ## Next up
 
 Milestone D0 is closed. **Milestone A starts at MA-1**, unaffected by it.
+
+0. **Nothing from ADR-17 blocks MA-1.** The resource layer is markdown only.
+   What it *adds* to Milestone B is listed at the end of this section.
 
 1. **MA-1 — the metric engine schema.** `PillarType`, `MetricDirection`,
    `MetricCadence`, `GoalStatus` enums plus `Metric`, `MetricEntry` and `Goal`
@@ -114,6 +174,33 @@ restart. Method is written up in `docs/features/foundation.md`.
 
 The old "140 solved" was never a record of anything — the previous seeder wrote
 it with `slice(0, 140)`. The 144 now in the database are real.
+
+### Added to Milestone B by ADR-17
+
+Not new milestones — additional scope inside existing ones.
+
+- **MB-1** — `RoadmapItem` gains a nullable `resources Json?`. Nullable, so
+  nothing existing changes.
+- **MB-2** — the §6 parser gains an optional fourth table column, and **must
+  fail loudly on a resource key matching no item**. That test is easy to omit
+  and its absence is invisible until someone finds a blank panel. Also add the
+  item-title collision test (finding 1 above) — ~20 lines, do it regardless of
+  what is decided about the 13 overlapping items.
+- **MB-4** — project `roadmap-resources.md` into the new column; decide the 13
+  overlapping items; fix `docs/cadence.md` §3. **Then delete
+  `client/scripts/build-roadmap-resources.mjs`, `roadmapResources.generated.ts`
+  and the `build:resources` / `check:resources` scripts**, and point
+  `ItemResources.tsx` at `item.resources`. The component itself survives
+  unchanged — only its data source moves.
+- **MB-7** — `/roadmap` should default to the interview-critical subset and show
+  per-track progress rather than one 134-item bar. This is the single
+  highest-leverage change in `roadmap-optimisation.md` and it is a UI default,
+  not a content change.
+- **`docs/features/roadmap.md`** is owed at MB-4, when this stops being markdown
+  and becomes a feature. It does not exist yet, deliberately — `CLAUDE.md`
+  rule 3 covers shipped features, and nothing has shipped.
+
+---
 
 Before starting anything: `cd server && npm test` must report **292 passing**.
 If it does not, fix that before writing a line of Milestone A.

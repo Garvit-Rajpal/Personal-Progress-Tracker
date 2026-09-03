@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { ItemRow } from './ItemRow';
+import { ItemResources } from './ItemResources';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -98,12 +99,15 @@ export function PhaseCard({
             {phase.items?.map((item: any) => {
               const isCompleted = !!userProgress.find((p) => p.itemId === item.id)?.completed;
               return (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  isCompleted={isCompleted}
-                  onToggle={() => onToggle({ itemId: item.id, completed: !isCompleted })}
-                />
+                <div key={item.id}>
+                  <ItemRow
+                    item={item}
+                    isCompleted={isCompleted}
+                    onToggle={() => onToggle({ itemId: item.id, completed: !isCompleted })}
+                  />
+                  {/* ADR-17 — a sibling, not a child: ItemRow is a <button>. */}
+                  <ItemResources phaseTitle={phase.title} itemTitle={item.title} />
+                </div>
               );
             })}
           </div>

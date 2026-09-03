@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:tokens": "node scripts/check-tokens.mjs"
+    "check:tokens": "node scripts/check-tokens.mjs",
+    "build:resources": "node scripts/build-roadmap-resources.mjs",
+    "check:resources": "node scripts/build-roadmap-resources.mjs --check"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

@@ -150,6 +150,9 @@ Violating any of these is a bug, not a style preference.
   opens with `Clearing existing roadmap data...` and `UserProgress` cascades
   away with the items. This is MB-2's remaining job.
 - `npm run check:tokens` (client) — ADR-16 colour-literal guard
+- `npm run build:resources` (client) — regenerate `roadmapResources.generated.ts`
+  from `docs/curriculum/notes/roadmap-resources.md` after editing it (ADR-17)
+- `npm run check:resources` (client) — fails if that generated module is stale
 - `npm run lint` / `npm run build` (client) — green as of Milestone D0
 - `npm test` (server) — full suite; must be green before any commit
 - `npm run test:unit` / `npm run test:integration`

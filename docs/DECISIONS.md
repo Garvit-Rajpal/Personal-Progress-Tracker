@@ -45,6 +45,7 @@ below in full.
 | ADR-14 | The response envelope is adopted per route family | accepted |
 | ADR-15 | DSA catalogue natural key; seeds stop deleting | accepted |
 | ADR-16 | Design tokens are the only source of colour; the client is theme-dual | accepted |
+| ADR-17 | Item resources: markdown source, generated client module, DB at MB-4 | accepted |
 
 ---
 
@@ -373,3 +374,144 @@ runner, and the risk this catches is not behavioural.
 Finally, this milestone was inserted ahead of MA-1 at the owner's direction. It
 touches only `client/`, adds no table, column or migration, and leaves the
 server suite untouched — so it delays Milestone A without reordering it.
+
+---
+
+### ADR-17 — Item resources are a curriculum-notes layer, projected into the database at MB-4
+
+**Date:** 2026-09-03  **Status:** accepted
+
+**Context.** The roadmap tells you *what* to learn and nothing about *where*.
+`RoadmapPhase.resources` exists but is a single comma-separated string rendered
+as one flat line per phase — `"LangChain docs, LlamaIndex docs, Pinecone /
+Qdrant docs, Greg Kamradt on YouTube"` covers six items at once and links to
+none of them. `RoadmapItem` has `title`, `description`, `badge`, `order` and no
+resource field at all.
+
+That is a real gap against `docs/cadence.md`. The budget is 1–2 h/day, and the
+document is explicit that the plan must survive bad days. On a bad day the
+difference between an item you can touch and an item you skip is whether there
+is a fifteen-minute link attached to it. Phase-level resources cannot provide
+that, because they do not tell you which of six links belongs to tonight's item.
+
+Three constraints shaped the answer:
+
+1. **Invariant 8** — curriculum lives in markdown; the database is a projection.
+   Resources are curriculum content, so they cannot originate in a seed script
+   or be typed into the UI.
+2. **`curriculumFormat.test.ts` asserts the exact file list** of
+   `docs/curriculum/` — `['ai-engineering.md', 'system-design.md']`. A seventh
+   top-level curriculum file breaks the suite, and rightly: the file list is
+   part of the seed contract.
+3. **Milestone order is strict.** A `RoadmapItem` column is a migration, which
+   is Milestone B. The next step is MA-1.
+
+**Decision.** Split the work across the boundary the constraints already draw.
+
+1. **Resources are authored as markdown in `docs/curriculum/notes/`.**
+   A subdirectory, not a file: `fs.readdirSync` is not recursive and the list is
+   filtered to `.md`, so `notes/` sits inside `docs/curriculum/` without
+   touching the asserted file list. Invariant 8 is satisfied — the markdown is
+   the source of truth — and no schema, seed or server test changes.
+
+1b. **A generator projects that markdown into the client, so it is usable now.**
+   `client/scripts/build-roadmap-resources.mjs` parses the blocks into
+   `client/src/lib/roadmapResources.generated.ts`, which `ItemResources.tsx`
+   renders under each roadmap item. This is **the same trade `client/src/lib/
+   cadence.ts` already makes** — a client module duplicating a docs file until
+   the endpoint that should own it ships, and marked for deletion when it does.
+   Client-only, like Milestone D0: no table, no column, no migration, no server
+   file, so the 292-test suite is untouched and the milestone order holds.
+   `npm run check:resources` fails the build if the generated module is stale,
+   the same guard shape as `check:tokens`.
+
+1c. **Every item carries inline revision content, not just links.** Each block
+   has a `Revise:` list of short bullets that render in the panel itself. This
+   is the part that makes the layer worth having: `docs/cadence.md` designs for
+   the day with fifteen minutes, and on that day a link to full documentation is
+   not a resource. Bullets must be *content* — "fixed → recursive → semantic, in
+   rising cost" — never a description of content.
+2. **Blocks are keyed `Phase title :: Item title`**, matching exactly the
+   `(phaseId, title)` pair the MB-2 seed upserts on (`docs/LLD_v2.md` §6). The
+   key is the join. Keys are copied from `server/prisma/seed.js`, never retyped.
+3. **`docs/LLD_v2.md` §6's table gains an optional fourth column at MB-2**, and
+   `RoadmapItem` gains a nullable `resources Json?` at MB-1. Nullable and
+   optional, so every existing curriculum table stays valid unchanged and the
+   parser needs no version flag.
+4. **Every link is opened before it is written down, and every video duration is
+   read from the video**, not estimated. Each file records the date it was last
+   checked, and the generator refuses to emit a `video` link with no duration.
+   Not a style preference — the checks kept finding real errors:
+
+   - Three stale references in the first draft: LangGraph's docs host moved, the
+     OWASP LLM Top 10 migrated to the GenAI Security Project and shipped a 2026
+     edition, and the Vercel AI SDK's `useChat` tool-call shape changed in v5.
+   - One **dead link** — a Jason Liu talk that no longer resolves.
+   - "Hamel on LLM as a Judge" is a **1m21s clip**, described in the first draft
+     as a ~45-minute talk. A resource list that misstates length is worse than
+     no list: it is the specific failure that makes someone stop opening it.
+   - 3Blue1Brown **retitled** chapter 5.
+   - The Matt Pocock generics video is 2m17s, not the ~12 minutes estimated.
+
+   Durations render in the app, and anything ≥30 minutes is styled as muted and
+   marked `(long)` so a bad-day click is never a surprise.
+
+**Alternatives rejected.**
+
+*Put the links in `RoadmapItem.description`.* Free — no migration, no parser
+change, visible immediately. Rejected because the description is prose rendered
+in a small muted line under the title, and stuffing four URLs into it makes both
+the title and the links unreadable. It also gives resources no independent
+structure, so a "revise in 15 minutes" filter — the whole point, per
+`docs/cadence.md` — becomes impossible.
+
+*Extend `RoadmapPhase.resources` and leave items alone.* The cheapest option and
+the one that changes nothing structurally. Rejected because phase granularity is
+the actual defect. Six items sharing one resource string is why the current
+field goes unread.
+
+*Reuse `UserRoadmapLink`.* The table exists and already renders on `/roadmap`.
+Rejected on invariant 1 and ADR-12: those rows are `userId`-scoped user data,
+while curriculum resources are shared, seeded projections of markdown. Putting
+syllabus content in a user-owned table would mean every future user re-entering
+it by hand, and would make the markdown no longer the source of truth.
+
+*Do the whole thing now — migration, parser, UI.* Rejected as a milestone-order
+violation. The server half (column, seed, API) waits for MB-1/MB-2/MB-4. Only
+the client half was built, which is precisely the D0 precedent: client-only, no
+table, no column, no migration, no server file touched.
+
+*Leave it as markdown only, and read it in an editor.* This was the first
+attempt and it was **wrong**. Markdown in the repo is not somewhere you revise;
+it is somewhere you archive. Links that are not clickable at the moment of use
+are data about links, not links. The owner said so directly, and the correction
+is the reason 1b and 1c exist. Worth recording because the failure is a general
+one: a resource that is not *at the point of use* is not a resource, however
+well written.
+
+**Consequences.**
+
+*The cost.* A generated module is duplicated state. `roadmapResources.generated.ts`
+is ~700 lines that exist nowhere in the database, and an edit to the markdown
+that is not followed by `npm run build:resources` ships stale content.
+`check:resources` catches exactly that and must run in CI once CI exists — which
+is itself an item on the roadmap, and currently the only thing enforcing it is
+the same discipline that already fails to run `npm test` automatically.
+
+*A second cost.* This creates a hand-maintained key. If MB-2 renames an item —
+and §1 of `roadmap-optimisation.md` proposes retiring 13 of them — a resource
+block silently orphans. **MB-2 must fail loudly on a resource key that matches
+no item**, not skip it. Written here because that test is easy to omit and its
+absence is invisible until someone notices a blank panel.
+
+*What it makes harder.* `docs/curriculum/notes/` is prose the parser ignores, so
+nothing enforces its shape the way `curriculumFormat.test.ts` enforces the
+curriculum files. Until MB-2 reads it, its correctness rests on review alone.
+That is accepted deliberately: adding a parser test for a format no code yet
+consumes would fix the format before its consumer exists.
+
+*What it buys.* The verification discipline in point 4 caught three stale links
+in an afternoon, including one (`OWASP LLM Top 10`, cited three times without a
+version in `ai-engineering.md`) that the curriculum file itself now gets wrong.
+That is the argument for this layer being a repo artifact under review rather
+than a private bookmarks folder.
